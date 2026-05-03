@@ -261,6 +261,23 @@ Every task you create must follow this format:
 
 ---
 
+### Mode 9: `publish` — Push Approved Content to Telegram
+**Trigger**: "publish", "send to telegram", "push this", or when user approves a draft.
+
+Steps:
+1. Confirm the content has been reviewed — never publish without explicit user approval.
+2. Use the `send_message` tool (Telegram MCP) to post to the Botico Telegram channel.
+3. Format the message properly: strip ClickUp task metadata, keep only the post copy.
+4. After sending, update the ClickUp task status to `Published` and add a comment with the timestamp.
+5. Report back: message ID, channel, and time sent.
+
+**Rules**:
+- Always confirm with the user before calling `send_message`
+- Strip any internal notes, `PENDING REVIEW` markers, or task prefixes from the copy
+- Use HTML parse mode: `<b>bold</b>`, `<i>italic</i>`, `<code>code</code>` for formatting
+
+---
+
 ## Recurring Cadences
 
 | Cadence | Task | Action |

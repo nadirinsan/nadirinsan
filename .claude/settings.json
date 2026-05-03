@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "telegram": {
+      "command": "python",
+      "args": ["/home/user/nadirinsan/telegram-mcp/server.py"],
+      "env": {
+        "TELEGRAM_BOT_TOKEN": "${TELEGRAM_BOT_TOKEN}",
+        "TELEGRAM_CHAT_ID": "${TELEGRAM_CHAT_ID}"
+      }
+    }
+  }
+}
