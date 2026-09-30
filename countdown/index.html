@@ -1,0 +1,326 @@
+<title>Big Countdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;500&family=Instrument+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: one full screen. Giant digits fill the middle, a thin progress line under them,
+     the setup bar docks at the bottom and fades away while the timer runs. */
+  :root {
+    --bg: #eef0f3;
+    --fg: #14181f;
+    --muted: #6a7382;
+    --line: #d3d8e0;
+    --field: #ffffff;
+    --accent: #1f6feb;
+    --done: #d92d20;
+    --font-digits: "Chivo Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0e13; --fg: #eef2f7; --muted: #7c8696; --line: #232a35;
+      --field: #141922; --accent: #5b9dff; --done: #ff5a4e; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0e13; --fg: #eef2f7; --muted: #7c8696; --line: #232a35;
+    --field: #141922; --accent: #5b9dff; --done: #ff5a4e; color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-ui); font-size: 15px;
+    display: flex; flex-direction: column;
+    padding-inline: 16px; box-sizing: border-box;
+    overflow: hidden;
+  }
+  * { box-sizing: border-box; }
+
+  .stage {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2vh;
+  }
+  .label {
+    font-size: clamp(12px, 1.6vw, 20px); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); min-height: 1.4em; text-align: center;
+  }
+  #time {
+    font-family: var(--font-digits); font-weight: 300;
+    font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap;
+    /* --chars is set from script so the digits always fit the width */
+    font-size: min(calc(96vw / (var(--chars, 5) * 0.62)), 52vh);
+    letter-spacing: -0.02em;
+    transition: color .2s;
+  }
+  body.done #time { color: var(--done); }
+  body.flash { animation: flash 1s steps(2, jump-none) 6; }
+  @keyframes flash { 50% { background: var(--done); } }
+
+  .progress {
+    width: min(90vw, 1400px); height: 6px; border-radius: 3px;
+    background: var(--line); overflow: hidden;
+  }
+  .progress span {
+    display: block; height: 100%; width: 100%; background: var(--accent);
+    transform-origin: left; transition: transform .25s linear;
+  }
+  body.done .progress span { background: var(--done); }
+
+  .dock {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center;
+    gap: 12px 20px; padding-block: 16px 24px;
+    transition: opacity .4s;
+  }
+  body.idle .dock { opacity: 0; pointer-events: none; }
+  body.idle { cursor: none; }
+
+  .fields { display: flex; gap: 8px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  }
+  .field input {
+    width: 4.2em; padding: 10px 8px; text-align: center;
+    font: 500 22px var(--font-digits); font-variant-numeric: tabular-nums;
+    background: var(--field); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  .sep { font: 500 22px var(--font-digits); color: var(--muted); padding-bottom: 10px; }
+
+  .presets, .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: 600 14px var(--font-ui); cursor: pointer;
+    padding: 11px 16px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--field); color: var(--fg);
+  }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; min-width: 96px; }
+  .presets button { padding: 11px 12px; font-family: var(--font-digits); font-weight: 500; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .keys { width: 100%; text-align: center; font-size: 12px; color: var(--muted); }
+  kbd {
+    font: 500 11px var(--font-digits); padding: 1px 5px;
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body.flash { animation: none; }
+    .progress span, .dock { transition: none; }
+  }
+</style>
+
+<main class="stage">
+  <div class="label" id="label">Ready</div>
+  <div id="time" aria-live="off">05:00</div>
+  <div class="progress"><span id="bar"></span></div>
+</main>
+
+<form class="dock" id="dock" autocomplete="off">
+  <div class="fields">
+    <div class="field"><label for="h">Hours</label><input id="h" type="number" inputmode="numeric" min="0" max="999" value="0"></div>
+    <span class="sep">:</span>
+    <div class="field"><label for="m">Minutes</label><input id="m" type="number" inputmode="numeric" min="0" value="5"></div>
+    <span class="sep">:</span>
+    <div class="field"><label for="s">Seconds</label><input id="s" type="number" inputmode="numeric" min="0" value="0"></div>
+  </div>
+  <div class="presets" aria-label="Presets">
+    <button type="button" data-sec="30">30s</button>
+    <button type="button" data-sec="60">1m</button>
+    <button type="button" data-sec="300">5m</button>
+    <button type="button" data-sec="600">10m</button>
+    <button type="button" data-sec="1800">30m</button>
+    <button type="button" data-sec="3600">1h</button>
+  </div>
+  <div class="buttons">
+    <button type="submit" class="primary" id="go">Start</button>
+    <button type="button" id="reset">Reset</button>
+    <button type="button" id="full">Full screen</button>
+  </div>
+  <div class="keys">
+    <kbd>Space</kbd> start / pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>Enter</kbd> start typed time
+  </div>
+</form>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const timeEl = $('time'), labelEl = $('label'), bar = $('bar'), goBtn = $('go');
+  const hIn = $('h'), mIn = $('m'), sIn = $('s');
+
+  let total = 300;        // seconds set
+  let remainingMs = total * 1000;
+  let endAt = 0;          // timestamp when running
+  let running = false, finished = false, tick = null, wakeLock = null, audio = null;
+
+  const store = {
+    get() { try { return JSON.parse(localStorage.getItem('countdown-total')); } catch { return null; } },
+    set(v) { try { localStorage.setItem('countdown-total', JSON.stringify(v)); } catch {} }
+  };
+
+  const pad = n => String(n).padStart(2, '0');
+  function format(ms) {
+    const neg = ms < 0;
+    // round up while counting down so 0.4s left still shows 00:01
+    let sec = neg ? Math.floor(-ms / 1000) : Math.ceil(ms / 1000);
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    const body = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+    return (neg ? '+' : '') + body;
+  }
+
+  function readInputs() {
+    const n = el => Math.max(0, Math.floor(Number(el.value) || 0));
+    return n(hIn) * 3600 + n(mIn) * 60 + n(sIn);
+  }
+  function writeInputs(sec) {
+    hIn.value = Math.floor(sec / 3600);
+    mIn.value = Math.floor(sec % 3600 / 60);
+    sIn.value = sec % 60;
+  }
+
+  function render() {
+    const ms = running ? endAt - Date.now() : remainingMs;
+    const text = format(ms);
+    if (timeEl.textContent !== text) {
+      timeEl.textContent = text;
+      timeEl.style.setProperty('--chars', Math.max(5, text.length));
+      document.title = (running ? text + ' · ' : '') + 'Big Countdown';
+    }
+    const frac = total > 0 ? Math.max(0, Math.min(1, ms / (total * 1000))) : 0;
+    bar.style.transform = `scaleX(${frac})`;
+    if (running && ms <= 0 && !finished) finish();
+  }
+
+  function setLabel() {
+    labelEl.textContent = finished ? "Time's up" : running ? '' : remainingMs < total * 1000 ? 'Paused' : 'Ready';
+    goBtn.textContent = running ? 'Pause' : remainingMs < total * 1000 && !finished ? 'Resume' : 'Start';
+  }
+
+  function setTotal(sec) {
+    total = sec; remainingMs = sec * 1000;
+    finished = false; document.body.classList.remove('done', 'flash');
+    store.set(sec);
+  }
+
+  function start() {
+    if (finished || remainingMs <= 0) setTotal(readInputs() || total);
+    if (total <= 0) return;
+    unlockAudio();
+    running = true;
+    endAt = Date.now() + remainingMs;
+    clearInterval(tick); tick = setInterval(render, 100);
+    requestWake();
+    setLabel(); render(); scheduleIdle();
+  }
+  function pause() {
+    remainingMs = endAt - Date.now();
+    running = false; clearInterval(tick);
+    if (finished) { remainingMs = 0; }
+    releaseWake(); setLabel(); render(); wake();
+  }
+  function reset() {
+    running = false; clearInterval(tick); releaseWake();
+    setTotal(readInputs() || total);
+    setLabel(); render(); wake();
+  }
+  function finish() {
+    finished = true;
+    document.body.classList.add('done');
+    document.body.classList.remove('flash'); void document.body.offsetWidth;
+    document.body.classList.add('flash');
+    beep(); setLabel(); wake();
+  }
+
+  // Sound: a short triple beep, allowed because the timer was started by a click or key.
+  function unlockAudio() {
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
+  }
+  function beep() {
+    if (!audio) return;
+    try {
+      [0, 0.35, 0.7].forEach(t => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, audio.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.4, audio.currentTime + t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t + 0.25);
+        o.connect(g).connect(audio.destination);
+        o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.3);
+      });
+    } catch {}
+  }
+
+  // Keep the screen awake while counting.
+  async function requestWake() {
+    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { wakeLock = null; }
+  }
+  function releaseWake() { try { wakeLock?.release(); } catch {} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && running) requestWake();
+  });
+
+  // Hide the controls and cursor after 3s without mouse movement while running.
+  let idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    scheduleIdle();
+  }
+  function scheduleIdle() {
+    clearTimeout(idleTimer);
+    if (running && document.activeElement?.tagName !== 'INPUT') {
+      idleTimer = setTimeout(() => document.body.classList.add('idle'), 3000);
+    }
+  }
+  ['mousemove', 'mousedown', 'touchstart'].forEach(e => document.addEventListener(e, wake, { passive: true }));
+
+  function toggleFull() {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    } catch {}
+  }
+
+  // Events
+  $('dock').addEventListener('submit', e => {
+    e.preventDefault();
+    if (running) pause();
+    else {
+      const typed = readInputs();
+      if (typed !== total || finished) { setTotal(typed); }
+      start();
+    }
+    document.activeElement?.blur();
+  });
+  $('reset').addEventListener('click', reset);
+  $('full').addEventListener('click', toggleFull);
+  document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => {
+    const sec = Number(b.dataset.sec);
+    writeInputs(sec);
+    running = false; clearInterval(tick); releaseWake();
+    setTotal(sec); start();
+  }));
+  [hIn, mIn, sIn].forEach(inp => {
+    inp.addEventListener('input', () => {
+      if (running) return;
+      setTotal(readInputs()); setLabel(); render();
+    });
+    inp.addEventListener('focus', () => inp.select());
+  });
+  // Normalise e.g. 90 seconds into 1 min 30 s when leaving a field.
+  [hIn, mIn, sIn].forEach(inp => inp.addEventListener('change', () => writeInputs(readInputs())));
+
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+    if (e.code === 'Space') { e.preventDefault(); running ? pause() : start(); }
+    else if (e.key === 'r' || e.key === 'R') reset();
+    else if (e.key === 'f' || e.key === 'F') toggleFull();
+  });
+
+  // Boot with the last used duration, or 5 minutes.
+  const saved = store.get();
+  if (Number.isFinite(saved) && saved > 0) { writeInputs(saved); setTotal(saved); }
+  setLabel(); render();
+})();
+</script>
