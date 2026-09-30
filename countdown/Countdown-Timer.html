@@ -70,14 +70,10 @@
   body.final .progress span { background: var(--done); }
   body.final { animation: pulse 1s ease-in-out infinite; }
   @keyframes pulse { 50% { background: color-mix(in srgb, var(--done) 30%, var(--bg)); } }
-  /* Time's up: the whole screen flashes solid red until someone stops it. */
-  body.done { animation: alarm .9s steps(1) infinite; }
+  /* Time's up: the whole screen turns solid red until someone stops it. */
+  body.done { background: var(--done); color: var(--on-done); }
   body.done #time, body.done .label { color: inherit; }
   body.done .label { font-size: clamp(28px, 6vw, 96px); font-weight: 600; letter-spacing: .06em; }
-  @keyframes alarm {
-    0% { background: var(--done); color: var(--on-done); }
-    50% { background: var(--bg); color: var(--done); }
-  }
 
   .progress {
     width: min(90vw, 1400px); height: 6px; border-radius: 3px;
@@ -135,7 +131,6 @@
 
   @media (prefers-reduced-motion: reduce) {
     body.final { animation: none; }
-    body.done { animation: none; background: var(--done); color: var(--on-done); }
     .progress span, .dock { transition: none; }
   }
 </style>
@@ -281,7 +276,7 @@
     finished = true;
     document.body.classList.remove('warn', 'final');
     document.body.classList.add('done');
-    // Beep every 2 seconds for about 20 seconds; the screen keeps flashing until stopped.
+    // Beep every 2 seconds for about 20 seconds; the screen stays red until stopped.
     let beeps = 0;
     beep();
     alarmTimer = setInterval(() => { if (++beeps >= 10) clearInterval(alarmTimer); else beep(); }, 2000);
