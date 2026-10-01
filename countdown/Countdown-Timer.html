@@ -43,6 +43,7 @@
     overflow: hidden; margin: 0;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
 
   .stage {
     flex: 1; min-height: 0;
@@ -130,7 +131,17 @@
   }
 
   /* Black screen: covers everything; the timer keeps running underneath. */
-  #blank { position: fixed; inset: 0; z-index: 100; background: #000; cursor: none; }
+  #blank {
+    position: fixed; inset: 0; z-index: 100; background: #000;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 32px;
+  }
+  /* Kept dim so the screen still reads as black to the room; brightens on hover. */
+  #back {
+    background: transparent; color: #4a4f57; border: 1px solid #2a2e34;
+    font: 600 15px var(--font-ui); padding: 12px 22px; border-radius: 8px;
+    transition: color .2s, border-color .2s;
+  }
+  #back:hover, #back:focus-visible { color: #e6e9ee; border-color: #6a7382; }
 
   @media (prefers-reduced-motion: reduce) {
     body.final { animation: none; }
@@ -182,7 +193,9 @@
   </div>
 </form>
 
-<div id="blank" hidden title="Click or press any key to show the timer"></div>
+<div id="blank" hidden title="Click or press any key to show the timer">
+  <button type="button" id="back">Back to timer</button>
+</div>
 
 <script>
 (() => {
