@@ -124,6 +124,9 @@
     border: 1px solid var(--line); border-radius: 4px;
   }
 
+  /* Black screen: covers everything; the timer keeps running underneath. */
+  #blank { position: fixed; inset: 0; z-index: 100; background: #000; cursor: none; }
+
   @media (prefers-reduced-motion: reduce) {
     body.final { animation: none; }
     .progress span, .dock { transition: none; }
@@ -164,12 +167,15 @@
   <div class="buttons">
     <button type="submit" class="primary" id="go">Start</button>
     <button type="button" id="reset">Reset</button>
+    <button type="button" id="blackout">Black screen</button>
     <button type="button" id="full">Full screen</button>
   </div>
   <div class="keys">
-    <kbd>Space</kbd> start / pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>Esc</kbd> stop alarm &nbsp; <kbd>Enter</kbd> start typed time
+    <kbd>Space</kbd> start / pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>B</kbd> black screen &nbsp; <kbd>Esc</kbd> stop alarm &nbsp; <kbd>Enter</kbd> start typed time
   </div>
 </form>
+
+<div id="blank" hidden title="Click or press any key to show the timer"></div>
 
 <script>
 (() => {
@@ -338,6 +344,10 @@
   });
   $('reset').addEventListener('click', reset);
   $('full').addEventListener('click', toggleFull);
+  const blank = $('blank');
+  function setBlank(on) { blank.hidden = !on; if (!on) wake(); }
+  $('blackout').addEventListener('click', () => { document.activeElement?.blur(); setBlank(true); });
+  blank.addEventListener('click', () => setBlank(false));
   document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => {
     const sec = Number(b.dataset.sec);
     writeInputs(sec);
@@ -355,11 +365,14 @@
   [hIn, mIn, sIn].forEach(inp => inp.addEventListener('change', () => writeInputs(readInputs())));
 
   document.addEventListener('keydown', e => {
+    // Any key brings the timer back from the black screen.
+    if (!blank.hidden) { e.preventDefault(); setBlank(false); return; }
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
     if (e.code === 'Space') { e.preventDefault(); running ? pause() : start(); }
     else if (e.key === 'r' || e.key === 'R') reset();
     else if (e.key === 'Escape' && finished) reset();
     else if (e.key === 'f' || e.key === 'F') toggleFull();
+    else if (e.key === 'b' || e.key === 'B') setBlank(true);
   });
 
   warnSel.addEventListener('change', () => { store.set(warnSel.value, 'countdown-warn'); render(); });
