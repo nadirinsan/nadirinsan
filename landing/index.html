@@ -2,6 +2,7 @@
 <meta name="description" content="Keep every session on schedule. A stage countdown timer for event managers and AV teams: amber and red warnings, black screen between sessions, your event logo. Try free for 5 minutes, then $49 once.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="config.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <style>
   /* Layout: written for event managers and AV teams. Each section pairs one job on event day
@@ -208,6 +209,8 @@
   .final .ctas { margin-top: 6px; }
   .final .btn:not(.primary) { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
   footer { padding-block: 24px 40px; font-size: 14px; color: var(--muted); }
+  footer a { color: inherit; }
+  .flinks { display: flex; flex-wrap: wrap; gap: 4px 6px; }
   footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 22px; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -224,6 +227,7 @@
       <a href="#uses">Use cases</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
+      <a data-unlock href="app/index.html#unlock">Have a key?</a>
       <a class="btn" data-app href="app/index.html">Try free</a>
       <a class="btn primary" data-buy href="#pricing">Buy <span data-price>$49</span></a>
     </nav>
@@ -241,7 +245,7 @@
           <a class="btn primary" data-app href="app/index.html">Try free for 5 minutes</a>
           <a class="btn" data-buy href="#pricing">Buy for <span data-price>$49</span> <span class="sub">once</span></a>
         </div>
-        <p class="note">Sign up with Google or email. No card needed for the trial.</p>
+        <p class="note">No account or password needed. Sign up with Google or email, no card for the trial.</p>
       </div>
       <figure>
         <img src="img/stage-monitor.jpg" width="1600" height="1000" alt="The speaker's view from stage: a floor monitor shows 00:42 in amber with the label Time is almost up, the audience in front.">
@@ -459,7 +463,8 @@
             <li>Unlimited sessions, any length</li>
             <li>Use it at every event you run</li>
             <li>Logo, colours, black screen, warnings</li>
-            <li>Works offline, no venue Wi-Fi needed</li>
+            <li>License key unlocks the web version on your computers</li>
+            <li>Offline file too, no venue Wi-Fi needed</li>
             <li>No subscription, no per-event fees</li>
           </ul>
           <a class="btn primary" data-buy href="#pricing">Buy for <span data-price>$49</span></a>
@@ -500,7 +505,15 @@
           </details>
           <details>
             <summary>How do we get the full version?</summary>
-            <p>Right after payment you receive the full timer as a file by email. Open it in any browser and there is no time limit.</p>
+            <p>Right after payment you get an email with a license key and the full timer file. Enter the key in the web version to remove the limit, or open the file on any computer, even offline.</p>
+          </details>
+          <details>
+            <summary>Do I need an account or password?</summary>
+            <p>No. The trial only asks for your name and email. After buying, your license key is all you need on any computer.</p>
+          </details>
+          <details>
+            <summary>We lost the file or the key. Now what?</summary>
+            <p><a data-orders href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">Look up your order</a> with the email you paid with to download the file and see the key again. Or write to <span data-email>hello@example.com</span>.</p>
           </details>
           <details>
             <summary>Is it a subscription?</summary>
@@ -532,28 +545,34 @@
 <footer>
   <div class="wrap">
     <span>© <span id="year">2026</span> <span data-name>Big Countdown</span></span>
-    <span>Questions? <span data-email>hello@example.com</span></span>
+    <span class="flinks"><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a data-unlock href="app/index.html#unlock">Unlock with a key</a> · <span data-email>hello@example.com</span></span>
   </div>
 </footer>
 
 <script>
 (() => {
-  // ---- Edit these before you go live ----
-  const CONFIG = {
-    name: 'Big Countdown',
-    price: '$49',
-    appUrl: 'app/index.html',   // where the free trial lives
-    buyUrl: '',                 // checkout link (Lemon Squeezy, Gumroad, Paddle, Stripe Payment Link...)
-    email: 'hello@example.com'
-  };
-  // ---------------------------------------
+  // Settings live in config.js (shared with the free trial). These are the fallbacks.
+  const CONFIG = Object.assign({
+    product: 'Big Countdown', price: '$49', appUrl: 'app/index.html', checkoutUrl: '',
+    supportEmail: 'hello@example.com', plausibleDomain: '', myOrdersUrl: 'https://app.lemonsqueezy.com/my-orders'
+  }, window.SITE_CONFIG || {});
   const $ = id => document.getElementById(id);
   const all = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
-  all('[data-name]', el => { el.textContent = CONFIG.name; });
+  all('[data-name]', el => { el.textContent = CONFIG.product; });
   all('[data-price]', el => { el.textContent = CONFIG.price; });
-  all('[data-email]', el => { el.textContent = CONFIG.email; });
+  all('[data-email]', el => { el.textContent = CONFIG.supportEmail; });
   all('[data-app]', a => { a.href = CONFIG.appUrl; });
-  if (CONFIG.buyUrl) all('[data-buy]', a => { a.href = CONFIG.buyUrl; a.target = '_blank'; a.rel = 'noopener'; });
+  all('[data-unlock]', a => { a.href = CONFIG.appUrl.split('#')[0] + '#unlock'; });
+  all('[data-orders]', a => { a.href = CONFIG.myOrdersUrl; });
+  if (CONFIG.checkoutUrl) all('[data-buy]', a => { a.href = CONFIG.checkoutUrl; a.target = '_blank'; a.rel = 'noopener'; });
+  const ev = name => { try { window.plausible && window.plausible(name); } catch {} };
+  all('[data-buy]', a => a.addEventListener('click', () => ev('landing_buy_click')));
+  all('[data-app]', a => a.addEventListener('click', () => ev('landing_trial_click')));
+  if (CONFIG.plausibleDomain) {
+    const pl = document.createElement('script');
+    pl.defer = true; pl.src = 'https://plausible.io/js/script.js'; pl.dataset.domain = CONFIG.plausibleDomain;
+    document.head.appendChild(pl);
+  }
   $('year').textContent = new Date().getFullYear();
 
   // ---- Mini timer: same warning rules as the real app (amber in the last minute, red in the last 10 s) ----

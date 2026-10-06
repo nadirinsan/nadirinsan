@@ -216,6 +216,13 @@
   .card .err:empty { display: none; }
   .card ul { margin: 0; padding-left: 18px; color: var(--fg); line-height: 1.7; font-size: 15px; }
   .card .small { font-size: 12px; }
+  .card .hint { font-size: 13px; color: var(--accent); }
+  .card .ok { font-size: 13px; color: var(--accent); }
+  .card .ok:empty { display: none; }
+  .card .small a { color: var(--fg); }
+  .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .paylinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
+  #licKey { font-family: var(--font-digits) !important; letter-spacing: .02em; }
   #gbtn { display: flex; justify-content: center; min-height: 44px; }
   .gfallback { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px 16px; }
   .gfallback svg { width: 18px; height: 18px; }
@@ -251,6 +258,7 @@
     .progress span, .dock { transition: none; }
   }
 </style>
+<script src="../config.js"></script>
 </head>
 <body>
 
@@ -342,8 +350,8 @@
 
 <div class="overlay" id="gate" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
-    <h2 id="gateTitle">Start your free 5 minutes</h2>
-    <p>Try every feature on your own screen. No card needed.</p>
+    <h2 id="gateTitle">Start your free <span data-minutes>5</span> minutes</h2>
+    <p>No account or password needed, and no card. Tell us who you are and the timer opens.</p>
     <div id="gbtn"></div>
     <div class="or">or fill in</div>
     <form id="leadForm" novalidate>
@@ -351,31 +359,53 @@
         <label class="f">Name<input type="text" id="leadFirst" autocomplete="given-name" required></label>
         <label class="f">Surname<input type="text" id="leadLast" autocomplete="family-name" required></label>
       </div>
-      <label class="f">Email<input type="email" id="leadEmail" autocomplete="email" required></label>
-      <label class="consent"><input type="checkbox" id="leadConsent" required> <span>I agree to receive emails about <span data-product>Big Countdown</span>. I can unsubscribe at any time.</span></label>
+      <label class="f">Work email<input type="email" id="leadEmail" autocomplete="email" required></label>
+      <div class="hint" id="emailHint" hidden></div>
+      <label class="consent"><input type="checkbox" id="leadNews"> <span>Send me event-timing tips and product news (optional). Unsubscribe any time.</span></label>
       <div class="err" id="leadErr" role="alert"></div>
       <button type="submit" class="primary wide">Start free trial</button>
     </form>
+    <p class="small">By continuing you agree to the <a data-terms href="../terms.html" target="_blank" rel="noopener">Terms</a> and <a data-privacy href="../privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+    <p class="small">Already bought? <button type="button" class="linkbtn" data-open-license>Unlock with your license key</button></p>
   </div>
 </div>
 
 <div class="overlay" id="paywall" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="payTitle">
-    <h2 id="payTitle">Your free 5 minutes are up</h2>
-    <p>Buy once and use <span data-product>Big Countdown</span> for life. No subscription.</p>
+    <h2 id="payTitle">Your free <span data-minutes>5</span> minutes are up</h2>
+    <p>Buy once and use <span data-product>Big Countdown</span> at every event. No subscription.</p>
     <div class="big"><span data-price>$49</span><small>one-time</small></div>
     <ul>
       <li>Unlimited countdowns, any length</li>
       <li>Your logo and background colours</li>
       <li>Black screen, warnings and alarm</li>
-      <li>Works offline as one file on your computer</li>
+      <li>Use it here in the browser, or offline as a file</li>
     </ul>
     <a class="btnlink wide" id="payBuy" href="#" target="_blank" rel="noopener">Buy lifetime access for <span data-price>$49</span></a>
     <div class="err" id="payErr"></div>
-    <p class="small">After you pay, the full version arrives by email as a file. Open it and the time limit is gone.</p>
+    <p class="small">You get a license key and the timer file by email. Enter the key here to unlock this browser, or open the file on any computer.</p>
+    <div class="paylinks">
+      <button type="button" class="linkbtn" data-open-license>I already bought: enter my key</button>
+      <button type="button" class="linkbtn" id="offerBtn" hidden>Not now, email me this offer</button>
+    </div>
+    <div class="ok" id="offerMsg" role="status"></div>
+    <p class="small" data-support-line hidden>Questions? Write to <span data-support></span></p>
   </div>
 </div>
 
+<div class="overlay" id="license" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="licTitle">
+    <h2 id="licTitle">Unlock with your license key</h2>
+    <p>You'll find the key in your purchase email. Unlocking removes the time limit in this browser.</p>
+    <form id="licForm" novalidate>
+      <label class="f">License key<input type="text" id="licKey" autocomplete="off" spellcheck="false" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" required></label>
+      <div class="err" id="licErr" role="alert"></div>
+      <button type="submit" class="primary wide" id="licGo">Unlock</button>
+    </form>
+    <p class="small">Can't find the key or the file? <a data-orders href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">Look up your order</a> with the email you paid with.</p>
+    <p class="small"><button type="button" class="linkbtn" id="licBack">Back</button></p>
+  </div>
+</div>
 <div id="trialBadge" hidden>Free trial · <b id="trialLeft">5:00</b> left <a id="badgeBuy" href="#" target="_blank" rel="noopener">Buy <span data-price>$49</span></a></div>
 
 <script>
@@ -686,30 +716,41 @@
   if (logoData && /^data:image\//.test(logoData)) logoImg.src = logoData; else logoData = null;
   layoutLogo();
 
-  // ---- Free trial (only active in the trial build) ----
-  // The build script switches TRIAL.enabled to true for the hosted free version.
-  const TRIAL = {
-    enabled: true,
-    minutes: 5,
+  // ---- Free trial, sign-up, paywall and license unlock (trial build only) ----
+  // The build script switches TRIAL_ON to true for the hosted free version and loads ../config.js,
+  // which sets window.SITE_CONFIG. Edit config.js, not these defaults.
+  const TRIAL_ON = true;
+  const CFG = Object.assign({
     product: 'Big Countdown',
     price: '$49',
-    buyUrl: '',          // checkout link (Lemon Squeezy, Gumroad, Paddle, Stripe Payment Link...)
-    leadEndpoint: '',    // URL that receives sign-ups as JSON (Formspree, Make/Zapier webhook, your CRM)
-    googleClientId: ''   // Google Identity Services web client ID, e.g. 1234-abc.apps.googleusercontent.com
-  };
-  const LIMIT_MS = TRIAL.minutes * 60 * 1000;
-  let trialUsed = 0, lastTrialTick = 0, lastTrialSave = 0, trialLocked = false;
-  const gate = $('gate'), paywall = $('paywall'), badge = $('trialBadge');
+    trialMinutes: 5,
+    checkoutUrl: '',
+    leadEndpoint: '',
+    leadMode: 'no-cors',
+    googleClientId: '',
+    supportEmail: '',
+    termsUrl: '../terms.html',
+    privacyUrl: '../privacy.html',
+    myOrdersUrl: 'https://app.lemonsqueezy.com/my-orders',
+    licenseApi: 'https://api.lemonsqueezy.com/v1/licenses',
+    licenseProductId: ''
+  }, window.SITE_CONFIG || {});
+  const LIMIT_MS = CFG.trialMinutes * 60 * 1000;
+  let trialUsed = 0, lastTrialTick = 0, lastTrialSave = 0, trialLocked = false, licensed = false;
+  const gate = $('gate'), paywall = $('paywall'), licBox = $('license'), badge = $('trialBadge');
 
-  function getProfile() { return store.get('countdown-profile'); }
+  const getProfile = () => store.get('countdown-profile');
+  const getLicense = () => store.get('countdown-license');
+
   function trialAllows() {
-    if (!TRIAL.enabled) return true;
+    if (!TRIAL_ON || licensed) return true;
     if (!getProfile()) { gate.hidden = false; return false; }
     if (trialUsed >= LIMIT_MS) { lockOut(); return false; }
+    if (!store.get('countdown-trial-started')) { store.set(true, 'countdown-trial-started'); track('trial_started'); }
     return true;
   }
   function trialTick() {
-    if (!TRIAL.enabled || trialLocked) return;
+    if (!TRIAL_ON || licensed || trialLocked) return;
     const now = Date.now();
     if (running && lastTrialTick) trialUsed += now - lastTrialTick;
     lastTrialTick = running ? now : 0;
@@ -718,87 +759,212 @@
     $('trialLeft').textContent = `${Math.floor(left / 60)}:${pad(left % 60)}`;
     if (trialUsed >= LIMIT_MS) lockOut();
   }
-  function lockOut() {
+  function lockOut(silent) {
     if (trialLocked) return;
     trialLocked = true;
     store.set(trialUsed, 'countdown-trial-used');
     running = false; clearInterval(tick); releaseWake(); stopAlarm();
     blank.hidden = true; badge.hidden = true; gate.hidden = true;
     paywall.hidden = false;
+    if (!silent && !store.get('countdown-trial-ended')) { store.set(true, 'countdown-trial-ended'); track('trial_ended'); }
   }
-  function wireBuy(a) {
-    if (TRIAL.buyUrl) { a.href = TRIAL.buyUrl; return; }
-    a.removeAttribute('target');
-    a.addEventListener('click', e => { e.preventDefault(); $('payErr').textContent = 'The checkout link has not been added yet.'; });
-  }
-
-  async function sendLead(lead) {
-    if (!TRIAL.leadEndpoint) return true;
-    try {
-      const r = await fetch(TRIAL.leadEndpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(lead)
-      });
-      return r.ok;
-    } catch { return false; }
-  }
-  async function register(lead) {
-    lead = { ...lead, product: TRIAL.product, signedUpAt: new Date().toISOString(), page: location.href };
-    store.set(lead, 'countdown-profile');
-    gate.hidden = true; badge.hidden = false; trialTick();
-    // If the CRM can't be reached now, keep the lead and retry on the next visit.
-    if (!(await sendLead(lead))) store.set(lead, 'countdown-lead-pending');
+  function unlock() {
+    licensed = true; trialLocked = false;
+    gate.hidden = paywall.hidden = licBox.hidden = badge.hidden = true;
   }
 
+  // Events go to your CRM endpoint (sign-ups, trial use, purchases) and to Plausible if it is on the page.
+  function send(payload) {
+    if (!CFG.leadEndpoint) return Promise.resolve(true);
+    const json = CFG.leadMode === 'json';
+    return fetch(CFG.leadEndpoint, {
+      method: 'POST', mode: json ? 'cors' : 'no-cors', keepalive: true,
+      headers: { 'Content-Type': json ? 'application/json' : 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(r => json ? r.ok : true).catch(() => false);
+  }
+  function track(event, extra = {}) {
+    const p = getProfile() || {};
+    const payload = {
+      event, at: new Date().toISOString(), product: CFG.product, page: location.href,
+      email: p.email || '', firstName: p.firstName || '', lastName: p.lastName || '',
+      method: p.method || '', newsletter: !!p.newsletter, trialUsedSeconds: Math.round(trialUsed / 1000), ...extra
+    };
+    try { window.plausible && window.plausible(event); } catch {}
+    send(payload).then(ok => {
+      if (ok) return;
+      const q = store.get('countdown-outbox') || [];
+      q.push(payload); store.set(q.slice(-50), 'countdown-outbox');
+    });
+  }
+  async function flushOutbox() {
+    const q = store.get('countdown-outbox') || [];
+    if (!q.length) return;
+    const left = [];
+    for (const item of q) if (!(await send(item))) left.push(item);
+    store.set(left, 'countdown-outbox');
+  }
+
+  function register(person) {
+    const profile = { ...person, newsletter: $('leadNews').checked, signedUpAt: new Date().toISOString() };
+    store.set(profile, 'countdown-profile');
+    gate.hidden = true;
+    if (trialUsed >= LIMIT_MS) { lockOut(); } else { badge.hidden = false; trialTick(); }
+    track('signup', { termsAccepted: true });
+  }
+
+  // Sign-up form, with a nudge for common email typos.
+  const TYPOS = { 'gmial.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gamil.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gnail.com': 'gmail.com',
+    'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'outlok.com': 'outlook.com', 'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'iclod.com': 'icloud.com' };
+  const emailHint = $('emailHint');
+  $('leadEmail').addEventListener('blur', () => {
+    const v = $('leadEmail').value.trim(), dom = v.split('@')[1]?.toLowerCase();
+    if (dom && TYPOS[dom]) {
+      emailHint.innerHTML = '';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'linkbtn'; b.textContent = v.split('@')[0] + '@' + TYPOS[dom];
+      b.addEventListener('click', () => { $('leadEmail').value = b.textContent; emailHint.hidden = true; });
+      emailHint.append('Did you mean ', b, '?');
+      emailHint.hidden = false;
+    } else emailHint.hidden = true;
+  });
   $('leadForm').addEventListener('submit', e => {
     e.preventDefault();
     const first = $('leadFirst').value.trim(), last = $('leadLast').value.trim(), email = $('leadEmail').value.trim();
     const err = $('leadErr');
     if (!first || !last) { err.textContent = 'Enter your name and surname.'; return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Enter a valid email address, like name@company.com.'; return; }
-    if (!$('leadConsent').checked) { err.textContent = 'Tick the box to agree to receive emails.'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { err.textContent = 'Enter a valid email address, like name@company.com.'; return; }
     err.textContent = '';
-    register({ firstName: first, lastName: last, email, method: 'form', marketingConsent: true });
+    register({ firstName: first, lastName: last, email, method: 'form' });
   });
 
   // Google sign-in: loads Google's button when a client ID is set.
   function setupGoogle() {
     const box = $('gbtn');
-    if (!TRIAL.googleClientId) {
+    if (!CFG.googleClientId) {
       box.innerHTML = '<button type="button" class="gfallback"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continue with Google</button>';
       box.querySelector('button').addEventListener('click', () => {
         $('leadErr').textContent = 'Google sign-in is not connected yet. Please use the form below.';
       });
       return;
     }
-    const s = document.createElement('script');
-    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
-    s.onload = () => {
-      google.accounts.id.initialize({ client_id: TRIAL.googleClientId, callback: res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+    sc.onload = () => {
+      google.accounts.id.initialize({ client_id: CFG.googleClientId, callback: res => {
         try {
           const b64 = res.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
           const info = JSON.parse(decodeURIComponent(escape(atob(b64))));
-          register({ firstName: info.given_name || '', lastName: info.family_name || '', email: info.email, method: 'google', marketingConsent: false });
+          register({ firstName: info.given_name || '', lastName: info.family_name || '', email: info.email, method: 'google', emailVerified: !!info.email_verified });
         } catch { $('leadErr').textContent = 'Google sign-in did not finish. Please use the form below.'; }
       }});
       google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 320 });
     };
-    s.onerror = () => { $('leadErr').textContent = 'Google sign-in could not load. Please use the form below.'; };
-    document.head.appendChild(s);
+    sc.onerror = () => { $('leadErr').textContent = 'Google sign-in could not load. Please use the form below.'; };
+    document.head.appendChild(sc);
   }
 
-  if (TRIAL.enabled) {
-    document.querySelectorAll('[data-price]').forEach(el => { el.textContent = TRIAL.price; });
-    document.querySelectorAll('[data-product]').forEach(el => { el.textContent = TRIAL.product; });
-    wireBuy($('payBuy')); wireBuy($('badgeBuy'));
+  // Checkout, prefilled with the trial user's name and email on Lemon Squeezy.
+  function checkoutHref() {
+    if (!CFG.checkoutUrl) return '';
+    try {
+      const u = new URL(CFG.checkoutUrl), p = getProfile();
+      if (u.hostname.endsWith('lemonsqueezy.com') && p) {
+        u.searchParams.set('checkout[email]', p.email);
+        u.searchParams.set('checkout[name]', `${p.firstName} ${p.lastName}`.trim());
+        u.searchParams.set('checkout[custom][source]', 'trial');
+      }
+      return u.toString();
+    } catch { return CFG.checkoutUrl; }
+  }
+  function wireBuy(a, from) {
+    a.addEventListener('click', e => {
+      const href = checkoutHref();
+      if (!href) { e.preventDefault(); $('payErr').textContent = 'The checkout link has not been added yet.'; return; }
+      a.href = href;
+      track('checkout_clicked', { from });
+    });
+  }
+
+  // License keys (Lemon Squeezy License API). A valid key unlocks this browser for good.
+  function showLicense() { licBox.hidden = false; $('licErr').textContent = ''; setTimeout(() => $('licKey').focus(), 50); }
+  async function licenseCall(action, params) {
+    const r = await fetch(`${CFG.licenseApi}/${action}`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(params)
+    });
+    return r.json();
+  }
+  $('licForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const key = $('licKey').value.trim(), err = $('licErr'), btn = $('licGo');
+    if (key.length < 8) { err.textContent = 'Paste the full license key from your purchase email.'; return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      const res = await licenseCall('activate', { license_key: key, instance_name: `${CFG.product} web · ${navigator.platform || 'browser'}` });
+      const wrongProduct = !!(res.activated && CFG.licenseProductId && String(res.meta?.product_id) !== String(CFG.licenseProductId));
+      if (res.activated && !wrongProduct) {
+        store.set({ key, instanceId: res.instance?.id || '', checkedAt: Date.now() }, 'countdown-license');
+        unlock(); track('license_activated');
+      } else {
+        err.textContent = wrongProduct ? 'That key belongs to a different product.'
+          : /limit/i.test(res.error || '') ? 'This key is already in use on the maximum number of devices. Write to support to move it.'
+          : 'That key was not accepted. Check it against your purchase email and try again.';
+        track('license_failed', { reason: res.error || (wrongProduct ? 'wrong product' : 'unknown') });
+      }
+    } catch {
+      err.textContent = 'Could not reach the license server. Check your internet connection and try again.';
+    }
+    btn.disabled = false; btn.textContent = 'Unlock';
+  });
+  $('licBack').addEventListener('click', () => { licBox.hidden = true; });
+  document.querySelectorAll('[data-open-license]').forEach(b => b.addEventListener('click', showLicense));
+
+  // Re-check a stored key once a week; refunded or disabled keys lock again.
+  async function recheckLicense(lic) {
+    if (Date.now() - (lic.checkedAt || 0) < 7 * 864e5) return;
+    try {
+      const res = await licenseCall('validate', { license_key: lic.key, ...(lic.instanceId ? { instance_id: lic.instanceId } : {}) });
+      if (res.valid) store.set({ ...lic, checkedAt: Date.now() }, 'countdown-license');
+      else if (res.license_key && ['disabled', 'expired'].includes(res.license_key.status)) {
+        try { localStorage.removeItem('countdown-license'); } catch {}
+        licensed = false; trialUsed = LIMIT_MS; lockOut(true);
+      }
+    } catch { /* offline: keep working */ }
+  }
+
+  $('offerBtn').addEventListener('click', () => {
+    const p = getProfile();
+    track('offer_requested');
+    $('offerMsg').textContent = p ? `Done. We'll email the offer to ${p.email}.` : "Done. We'll email you the offer.";
+    $('offerBtn').hidden = true;
+  });
+
+  if (TRIAL_ON) {
+    const fill = (sel, v) => document.querySelectorAll(sel).forEach(el => { el.textContent = v; });
+    fill('[data-price]', CFG.price); fill('[data-product]', CFG.product); fill('[data-minutes]', CFG.trialMinutes);
+    document.querySelectorAll('[data-terms]').forEach(a => { a.href = CFG.termsUrl; });
+    document.querySelectorAll('[data-privacy]').forEach(a => { a.href = CFG.privacyUrl; });
+    document.querySelectorAll('[data-orders]').forEach(a => { a.href = CFG.myOrdersUrl; });
+    if (CFG.supportEmail) { fill('[data-support]', CFG.supportEmail); document.querySelectorAll('[data-support-line]').forEach(el => { el.hidden = false; }); }
+    $('offerBtn').hidden = !CFG.leadEndpoint;
+    wireBuy($('payBuy'), 'paywall'); wireBuy($('badgeBuy'), 'badge');
     const used = Number(store.get('countdown-trial-used'));
     trialUsed = Number.isFinite(used) ? used : 0;
-    const pending = store.get('countdown-lead-pending');
-    if (pending) sendLead(pending).then(ok => { if (ok) try { localStorage.removeItem('countdown-lead-pending'); } catch {} });
+    flushOutbox();
     setupGoogle();
-    if (!getProfile()) gate.hidden = false;
-    else if (trialUsed >= LIMIT_MS) lockOut();
+    if (CFG.plausibleDomain) {
+      const pl = document.createElement('script');
+      pl.defer = true; pl.src = 'https://plausible.io/js/script.js'; pl.dataset.domain = CFG.plausibleDomain;
+      document.head.appendChild(pl);
+    }
+    const lic = getLicense();
+    if (lic && lic.key) { unlock(); recheckLicense(lic); }
+    else if (!getProfile()) gate.hidden = false;
+    else if (trialUsed >= LIMIT_MS) lockOut(true);
     else { badge.hidden = false; trialTick(); }
+    if (!licensed && location.hash === '#unlock') showLicense();
   }
 
   // Boot with the last used duration, or 5 minutes.
