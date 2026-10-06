@@ -1,0 +1,9 @@
+# Netlify: builds the website from this repo. Site root = landing/site
+[build]
+  command = "sh landing/build.sh"
+  publish = "landing/site"
+
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "no-cache"

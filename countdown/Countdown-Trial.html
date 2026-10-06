@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Big Countdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;500&family=Instrument+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: one full screen. Giant digits fill the middle, a thin progress line under them,
+     the setup bar docks at the bottom and fades away while the timer runs. */
+  :root {
+    --bg: #eef0f3;
+    --fg: #14181f;
+    --muted: #6a7382;
+    --line: #d3d8e0;
+    --field: #ffffff;
+    --accent: #1f6feb;
+    --warn: #c27a00;
+    --done: #d92d20;
+    --on-done: #ffffff;
+    --font-digits: "Chivo Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0e13; --fg: #eef2f7; --muted: #7c8696; --line: #232a35;
+      --field: #141922; --accent: #5b9dff; --warn: #ffb020; --done: #ff4438; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0e13; --fg: #eef2f7; --muted: #7c8696; --line: #232a35;
+    --field: #141922; --accent: #5b9dff; --warn: #ffb020; --done: #ff4438; color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-ui); font-size: 15px;
+    display: flex; flex-direction: column;
+    padding-inline: 16px; box-sizing: border-box;
+    overflow: hidden; margin: 0;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  .stage {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2vh;
+  }
+  .label {
+    font-size: clamp(12px, 1.6vw, 20px); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); min-height: 1.4em; text-align: center;
+  }
+  #time {
+    font-family: var(--font-digits); font-weight: 300;
+    font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap;
+    /* --chars is set from script so the digits always fit the width */
+    font-size: min(calc(96vw / (var(--chars, 5) * 0.62)), 52vh);
+    letter-spacing: -0.02em;
+    transition: color .2s;
+  }
+  /* Warning phase: digits turn amber. */
+  body.warn #time { color: var(--warn); }
+  body.warn .label { color: var(--warn); }
+  body.warn .progress span { background: var(--warn); }
+  /* Final 10 seconds: red digits and the screen pulses red once a second. */
+  body.final #time, body.final .label { color: var(--done); }
+  body.final .progress span { background: var(--done); }
+  body.final { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { background: color-mix(in srgb, var(--done) 30%, var(--bg)); } }
+  /* Time's up: the whole screen turns solid red until someone stops it. */
+  body.done { background: var(--done); color: var(--on-done); }
+  body.done #time, body.done .label { color: inherit; }
+  body.done .label { font-size: clamp(28px, 6vw, 96px); font-weight: 600; letter-spacing: .06em; }
+
+  .progress {
+    width: min(90vw, 1400px); height: 6px; border-radius: 3px;
+    background: var(--line); overflow: hidden;
+  }
+  .progress span {
+    display: block; height: 100%; width: 100%; background: var(--accent);
+    transform-origin: left; transition: transform .25s linear;
+  }
+  body.done .progress span { background: var(--done); }
+  body.done .progress { background: transparent; }
+
+  .dock {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center;
+    gap: 12px 20px; padding-block: 16px 24px;
+    transition: opacity .4s;
+  }
+  body.idle .dock { opacity: 0; pointer-events: none; }
+  body.idle { cursor: none; }
+
+  .fields { display: flex; gap: 8px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  }
+  .field input {
+    width: 4.2em; padding: 10px 8px; text-align: center;
+    font: 500 22px var(--font-digits); font-variant-numeric: tabular-nums;
+    background: var(--field); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  .field select {
+    padding: 12px 10px; font: 500 15px var(--font-ui);
+    background: var(--field); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  .sep { font: 500 22px var(--font-digits); color: var(--muted); padding-bottom: 10px; }
+
+  .presets, .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: 600 14px var(--font-ui); cursor: pointer;
+    padding: 11px 16px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--field); color: var(--fg);
+  }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; min-width: 96px; }
+  .presets button { padding: 11px 12px; font-family: var(--font-digits); font-weight: 500; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Background picker: a row of swatches plus a custom colour. */
+  .bgpick { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+  .bgpick > span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+  .swatch {
+    width: 34px; height: 34px; padding: 0; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--sw);
+  }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+  .swatch.auto { background: linear-gradient(135deg, #eef0f3 50%, #0b0e13 50%); }
+  .custom { position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .custom input { width: 34px; height: 34px; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: none; cursor: pointer; }
+  .custom input::-webkit-color-swatch-wrapper { padding: 0; }
+  .custom input::-webkit-color-swatch { border: none; border-radius: 50%; }
+  .custom input::-moz-color-swatch { border: none; border-radius: 50%; }
+  .custom.on input { border-color: var(--accent); }
+  body { background-image: var(--bg-image, none); background-attachment: fixed; }
+  body.final, body.done { background-image: none; }
+
+  .keys { width: 100%; text-align: center; font-size: 12px; color: var(--muted); }
+  kbd {
+    font: 500 11px var(--font-digits); padding: 1px 5px;
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+
+  /* Logo: in the flow above the time when centred, pinned to a corner otherwise. */
+  #logoBox { display: flex; justify-content: center; }
+  #logoBox img { display: block; height: var(--logo-h, 10vh); max-width: 30vw; object-fit: contain; }
+  #logoBox.left, #logoBox.right { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); z-index: 5; }
+  #logoBox.left { left: 24px; }
+  #logoBox.right { right: 24px; }
+  body.logo-center #time { font-size: min(calc(96vw / (var(--chars, 5) * 0.62)), 40vh); }
+  #logoBox.s { --logo-h: 6vh; }
+  #logoBox.m { --logo-h: 10vh; }
+  #logoBox.l { --logo-h: 16vh; }
+
+  .logopick { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; position: relative; }
+  .logopick > span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .logopick select { padding: 9px 8px; font: 500 14px var(--font-ui); background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; }
+  .logopick button { padding: 9px 14px; }
+  #logoFile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .logopick .info {
+    flex: none; width: 24px; height: 24px; min-width: 0; padding: 0; border-radius: 50%;
+    font: italic 700 13px Georgia, "Times New Roman", serif; line-height: 1;
+    color: var(--muted); background: transparent; border: 1.5px solid var(--muted);
+  }
+  .info:hover, .info[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  .infopop {
+    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    width: min(340px, calc(100vw - 32px)); z-index: 20;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; font-size: 13px; line-height: 1.5;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .infopop strong { display: block; margin-bottom: 4px; font-size: 14px; }
+  .infopop ul { margin: 0; padding-left: 18px; }
+  .logomsg { width: 100%; text-align: center; font-size: 12px; color: var(--done); min-height: 0; }
+  .logomsg:empty { display: none; }
+
+  /* Free trial: sign-up gate, paywall and the minutes-left badge (trial build only). */
+  .overlay {
+    position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+    padding: 16px; overflow-y: auto;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .card {
+    width: min(440px, 100%); background: var(--bg); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 16px; padding: 28px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.25);
+    display: grid; gap: 14px;
+  }
+  .card h2 { margin: 0; font: 600 26px/1.15 var(--font-ui); text-wrap: balance; }
+  .card p { margin: 0; color: var(--muted); line-height: 1.5; }
+  .card .big { font: 300 64px/1 var(--font-digits); color: var(--fg); }
+  .card .big small { font: 500 15px var(--font-ui); color: var(--muted); margin-left: 6px; }
+  .card form { display: grid; gap: 10px; }
+  .card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card label.f { display: grid; gap: 4px; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+  .card input[type="text"], .card input[type="email"], .card input[type="password"] {
+    width: 100%; padding: 11px 12px; font: 400 16px var(--font-ui);
+    background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .card .consent { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .card .consent input { margin-top: 2px; }
+  .card .wide { width: 100%; justify-content: center; padding: 13px 16px; font-size: 16px; }
+  .card .or { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .card .or::before, .card .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .card .err { color: var(--done); font-size: 13px; }
+  .card .err:empty { display: none; }
+  .card ul { margin: 0; padding-left: 18px; color: var(--fg); line-height: 1.7; font-size: 15px; }
+  .card .small { font-size: 12px; }
+  .card .hint { font-size: 13px; color: var(--accent); }
+  .card .ok { font-size: 13px; color: var(--accent); }
+  .card .ok:empty { display: none; }
+  .card .small a { color: var(--fg); }
+  .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .paylinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
+  #licKey { font-family: var(--font-digits) !important; letter-spacing: .02em; }
+  #gbtn { display: flex; justify-content: center; min-height: 44px; }
+  .gfallback { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px 16px; }
+  .gfallback svg { width: 18px; height: 18px; }
+  a.btnlink {
+    display: block; text-align: center; text-decoration: none; border-radius: 8px;
+    font: 600 16px var(--font-ui); background: var(--accent); color: #fff; border: 1px solid var(--accent);
+  }
+  #trialBadge {
+    position: fixed; z-index: 6; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+    padding: 6px 6px 6px 14px; border-radius: 99px;
+    background: var(--field); color: var(--fg); border: 1px solid var(--line);
+  }
+  #trialBadge b { font-family: var(--font-digits); font-weight: 500; }
+  #trialBadge a { text-decoration: none; padding: 6px 12px; border-radius: 99px; background: var(--accent); color: #fff; font-weight: 600; }
+  @media (max-width: 480px) { .card .row2 { grid-template-columns: 1fr; } }
+
+  /* Black screen: covers everything; the timer keeps running underneath. */
+  #blank {
+    position: fixed; inset: 0; z-index: 100; background: #000;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 32px;
+  }
+  /* Kept dim so the screen still reads as black to the room; brightens on hover. */
+  #back {
+    background: transparent; color: #4a4f57; border: 1px solid #2a2e34;
+    font: 600 15px var(--font-ui); padding: 12px 22px; border-radius: 8px;
+    transition: color .2s, border-color .2s;
+  }
+  #back:hover, #back:focus-visible { color: #e6e9ee; border-color: #6a7382; }
+
+  @media (prefers-reduced-motion: reduce) {
+    body.final { animation: none; }
+    .progress span, .dock { transition: none; }
+  }
+</style>
+<script src="../config.js"></script>
+</head>
+<body>
+
+<main class="stage">
+  <div id="logoBox" class="m" hidden><img id="logoImg" alt="Logo"></div>
+  <div class="label" id="label">Ready</div>
+  <div id="time" aria-live="off">05:00</div>
+  <div class="progress"><span id="bar"></span></div>
+</main>
+
+<form class="dock" id="dock" autocomplete="off">
+  <div class="fields">
+    <div class="field"><label for="h">Hours</label><input id="h" type="number" inputmode="numeric" min="0" max="999" value="0"></div>
+    <span class="sep">:</span>
+    <div class="field"><label for="m">Minutes</label><input id="m" type="number" inputmode="numeric" min="0" value="5"></div>
+    <span class="sep">:</span>
+    <div class="field"><label for="s">Seconds</label><input id="s" type="number" inputmode="numeric" min="0" value="0"></div>
+  </div>
+  <div class="field"><label for="warnAt">Red warning</label>
+    <select id="warnAt">
+      <option value="0">Off</option>
+      <option value="30">Last 30 sec</option>
+      <option value="60" selected>Last 1 min</option>
+      <option value="120">Last 2 min</option>
+      <option value="300">Last 5 min</option>
+    </select>
+  </div>
+  <div class="presets" aria-label="Presets">
+    <button type="button" data-sec="30">30s</button>
+    <button type="button" data-sec="60">1m</button>
+    <button type="button" data-sec="300">5m</button>
+    <button type="button" data-sec="600">10m</button>
+    <button type="button" data-sec="1800">30m</button>
+    <button type="button" data-sec="3600">1h</button>
+  </div>
+  <div class="buttons">
+    <button type="submit" class="primary" id="go">Start</button>
+    <button type="button" id="reset">Reset</button>
+    <button type="button" id="blackout">Black screen</button>
+    <button type="button" id="full">Full screen</button>
+  </div>
+  <div class="bgpick" role="group" aria-label="Background">
+    <span>Background</span>
+    <button type="button" class="swatch auto" data-bg="auto" title="Auto (follows light/dark mode)" aria-label="Auto"></button>
+    <button type="button" class="swatch" data-bg="black" title="Black" aria-label="Black" style="--sw:#000"></button>
+    <button type="button" class="swatch" data-bg="navy" title="Navy" aria-label="Navy" style="--sw:#0d1b2e"></button>
+    <button type="button" class="swatch" data-bg="forest" title="Forest green" aria-label="Forest green" style="--sw:#0f2a22"></button>
+    <button type="button" class="swatch" data-bg="wine" title="Wine" aria-label="Wine" style="--sw:#2a0f1c"></button>
+    <button type="button" class="swatch" data-bg="white" title="White" aria-label="White" style="--sw:#fff"></button>
+    <button type="button" class="swatch" data-bg="midnight" title="Midnight gradient" aria-label="Midnight gradient" style="--sw:linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)"></button>
+    <button type="button" class="swatch" data-bg="ocean" title="Ocean gradient" aria-label="Ocean gradient" style="--sw:linear-gradient(160deg,#0a6a80,#06334a 55%,#0b1d3a)"></button>
+    <label class="custom" id="customWrap" title="Pick any colour"><input type="color" id="bgColor" value="#1e1e2e"> Custom</label>
+  </div>
+  <div class="logopick" role="group" aria-label="Logo">
+    <span>Logo</span>
+    <button type="button" class="info" id="logoInfo" aria-expanded="false" aria-controls="logoPop" title="Logo file requirements">i</button>
+    <div class="infopop" id="logoPop" role="note" hidden>
+      <strong>Logo file requirements</strong>
+      <ul>
+        <li>Formats: PNG, JPG, SVG, WebP or GIF</li>
+        <li>Maximum size: 2 MB</li>
+        <li>Best results: PNG or SVG with a transparent background, at least 400 px wide</li>
+        <li>The logo stays on this computer and is remembered next time</li>
+      </ul>
+    </div>
+    <input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif">
+    <button type="button" id="logoUpload">Upload logo</button>
+    <select id="logoPos" aria-label="Logo position">
+      <option value="center">Top centre</option>
+      <option value="left">Top left</option>
+      <option value="right">Top right</option>
+    </select>
+    <select id="logoSize" aria-label="Logo size">
+      <option value="s">Small</option>
+      <option value="m" selected>Medium</option>
+      <option value="l">Large</option>
+    </select>
+    <button type="button" id="logoRemove" hidden>Remove</button>
+    <div class="logomsg" id="logoMsg" role="status"></div>
+  </div>
+  <div class="keys">
+    <kbd>Space</kbd> start / pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>B</kbd> black screen &nbsp; <kbd>Esc</kbd> stop alarm &nbsp; <kbd>Enter</kbd> start typed time
+  </div>
+</form>
+
+<div id="blank" hidden title="Click or press any key to show the timer">
+  <button type="button" id="back">Back to timer</button>
+</div>
+
+<div class="overlay" id="gate" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <h2 id="gateTitle">Start your free <span data-minutes>5</span> minutes</h2>
+    <p>No account or password needed, and no card. Tell us who you are and the timer opens.</p>
+    <div id="gbtn"></div>
+    <div class="or">or fill in</div>
+    <form id="leadForm" novalidate>
+      <div class="row2">
+        <label class="f">Name<input type="text" id="leadFirst" autocomplete="given-name" required></label>
+        <label class="f">Surname<input type="text" id="leadLast" autocomplete="family-name" required></label>
+      </div>
+      <label class="f">Work email<input type="email" id="leadEmail" autocomplete="email" required></label>
+      <div class="hint" id="emailHint" hidden></div>
+      <label class="consent"><input type="checkbox" id="leadNews"> <span>Send me event-timing tips and product news (optional). Unsubscribe any time.</span></label>
+      <div class="err" id="leadErr" role="alert"></div>
+      <button type="submit" class="primary wide">Start free trial</button>
+    </form>
+    <p class="small">By continuing you agree to the <a data-terms href="../terms.html" target="_blank" rel="noopener">Terms</a> and <a data-privacy href="../privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+    <p class="small">Already bought? <button type="button" class="linkbtn" data-open-license>Unlock with your license key</button></p>
+  </div>
+</div>
+
+<div class="overlay" id="paywall" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <h2 id="payTitle">Your free <span data-minutes>5</span> minutes are up</h2>
+    <p>Buy once and use <span data-product>Big Countdown</span> at every event. No subscription.</p>
+    <div class="big"><span data-price>$49</span><small>one-time</small></div>
+    <ul>
+      <li>Unlimited countdowns, any length</li>
+      <li>Your logo and background colours</li>
+      <li>Black screen, warnings and alarm</li>
+      <li>Use it here in the browser, or offline as a file</li>
+    </ul>
+    <a class="btnlink wide" id="payBuy" href="#" target="_blank" rel="noopener">Buy lifetime access for <span data-price>$49</span></a>
+    <div class="err" id="payErr"></div>
+    <p class="small">You get a license key and the timer file by email. Enter the key here to unlock this browser, or open the file on any computer.</p>
+    <div class="paylinks">
+      <button type="button" class="linkbtn" data-open-license>I already bought: enter my key</button>
+      <button type="button" class="linkbtn" id="offerBtn" hidden>Not now, email me this offer</button>
+    </div>
+    <div class="ok" id="offerMsg" role="status"></div>
+    <p class="small" data-support-line hidden>Questions? Write to <span data-support></span></p>
+  </div>
+</div>
+
+<div class="overlay" id="license" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="licTitle">
+    <h2 id="licTitle">Unlock with your license key</h2>
+    <p>You'll find the key in your purchase email. Unlocking removes the time limit in this browser.</p>
+    <form id="licForm" novalidate>
+      <label class="f">License key<input type="text" id="licKey" autocomplete="off" spellcheck="false" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" required></label>
+      <div class="err" id="licErr" role="alert"></div>
+      <button type="submit" class="primary wide" id="licGo">Unlock</button>
+    </form>
+    <p class="small">Can't find the key or the file? <a data-orders href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">Look up your order</a> with the email you paid with.</p>
+    <p class="small"><button type="button" class="linkbtn" id="licBack">Back</button></p>
+  </div>
+</div>
+<div id="trialBadge" hidden>Free trial · <b id="trialLeft">5:00</b> left <a id="badgeBuy" href="#" target="_blank" rel="noopener">Buy <span data-price>$49</span></a></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const timeEl = $('time'), labelEl = $('label'), bar = $('bar'), goBtn = $('go');
+  const hIn = $('h'), mIn = $('m'), sIn = $('s');
+
+  let total = 300;        // seconds set
+  let remainingMs = total * 1000;
+  let endAt = 0;          // timestamp when running
+  let running = false, finished = false, tick = null, wakeLock = null, audio = null, alarmTimer = null;
+  const warnSel = $('warnAt');
+
+  const store = {
+    get(k = 'countdown-total') { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(v, k = 'countdown-total') { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  const pad = n => String(n).padStart(2, '0');
+  function format(ms) {
+    const neg = ms < 0;
+    // round up while counting down so 0.4s left still shows 00:01
+    let sec = neg ? Math.floor(-ms / 1000) : Math.ceil(ms / 1000);
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    const body = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+    return (neg ? '+' : '') + body;
+  }
+
+  function readInputs() {
+    const n = el => Math.max(0, Math.floor(Number(el.value) || 0));
+    return n(hIn) * 3600 + n(mIn) * 60 + n(sIn);
+  }
+  function writeInputs(sec) {
+    hIn.value = Math.floor(sec / 3600);
+    mIn.value = Math.floor(sec % 3600 / 60);
+    sIn.value = sec % 60;
+  }
+
+  function render() {
+    const ms = running ? endAt - Date.now() : remainingMs;
+    const text = format(ms);
+    if (timeEl.textContent !== text) {
+      timeEl.textContent = text;
+      timeEl.style.setProperty('--chars', Math.max(5, text.length));
+      document.title = (running ? text + ' · ' : '') + 'Big Countdown';
+    }
+    const frac = total > 0 ? Math.max(0, Math.min(1, ms / (total * 1000))) : 0;
+    bar.style.transform = `scaleX(${frac})`;
+    if (running && ms <= 0 && !finished) finish();
+    // Warning phases, counted from the time left.
+    const warnMs = Number(warnSel.value) * 1000;
+    const counting = !finished && ms > 0 && ms < total * 1000;
+    const final = counting && warnMs > 0 && ms <= 10000;
+    const warn = counting && warnMs > 0 && ms <= warnMs && !final;
+    document.body.classList.toggle('warn', warn);
+    document.body.classList.toggle('final', final && running);
+    if (running && !finished) labelEl.textContent = final ? 'Final seconds' : warn ? 'Time is almost up' : '';
+    trialTick();
+  }
+
+  function setLabel() {
+    labelEl.textContent = finished ? "Time's up" : running ? labelEl.textContent : remainingMs < total * 1000 ? 'Paused' : 'Ready';
+    goBtn.textContent = finished ? 'Stop alarm' : running ? 'Pause' : remainingMs < total * 1000 && !finished ? 'Resume' : 'Start';
+  }
+
+  function setTotal(sec) {
+    total = sec; remainingMs = sec * 1000;
+    finished = false; stopAlarm();
+    store.set(sec);
+  }
+
+  function start() {
+    if (!trialAllows()) return;
+    if (finished || remainingMs <= 0) setTotal(readInputs() || total);
+    if (total <= 0) return;
+    unlockAudio();
+    running = true;
+    endAt = Date.now() + remainingMs;
+    clearInterval(tick); tick = setInterval(render, 100);
+    requestWake();
+    setLabel(); render(); scheduleIdle();
+  }
+  function stopAlarm() {
+    clearInterval(alarmTimer); alarmTimer = null;
+    document.body.classList.remove('done', 'final', 'warn');
+  }
+  function pause() {
+    if (finished) return reset();
+    remainingMs = endAt - Date.now();
+    running = false; clearInterval(tick);
+    releaseWake(); setLabel(); render(); wake();
+  }
+  function reset() {
+    running = false; clearInterval(tick); releaseWake();
+    setTotal(readInputs() || total);
+    setLabel(); render(); wake();
+  }
+  function finish() {
+    finished = true;
+    document.body.classList.remove('warn', 'final');
+    document.body.classList.add('done');
+    // Beep every 2 seconds for about 20 seconds; the screen stays red until stopped.
+    let beeps = 0;
+    beep();
+    alarmTimer = setInterval(() => { if (++beeps >= 10) clearInterval(alarmTimer); else beep(); }, 2000);
+    setLabel(); wake();
+  }
+
+  // Sound: a short triple beep, allowed because the timer was started by a click or key.
+  function unlockAudio() {
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
+  }
+  function beep() {
+    if (!audio) return;
+    try {
+      [0, 0.35, 0.7].forEach(t => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, audio.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.4, audio.currentTime + t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t + 0.25);
+        o.connect(g).connect(audio.destination);
+        o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.3);
+      });
+    } catch {}
+  }
+
+  // Keep the screen awake while counting.
+  async function requestWake() {
+    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { wakeLock = null; }
+  }
+  function releaseWake() { try { wakeLock?.release(); } catch {} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && running) requestWake();
+  });
+
+  // Hide the controls and cursor after 3s without mouse movement while running.
+  let idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    scheduleIdle();
+  }
+  function scheduleIdle() {
+    clearTimeout(idleTimer);
+    if (running && document.activeElement?.tagName !== 'INPUT') {
+      idleTimer = setTimeout(() => document.body.classList.add('idle'), 3000);
+    }
+  }
+  ['mousemove', 'mousedown', 'touchstart'].forEach(e => document.addEventListener(e, wake, { passive: true }));
+
+  function toggleFull() {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    } catch {}
+  }
+
+  // Events
+  $('dock').addEventListener('submit', e => {
+    e.preventDefault();
+    if (running) pause();
+    else {
+      const typed = readInputs();
+      if (typed !== total || finished) { setTotal(typed); }
+      start();
+    }
+    document.activeElement?.blur();
+  });
+  $('reset').addEventListener('click', reset);
+  $('full').addEventListener('click', toggleFull);
+  const blank = $('blank');
+  function setBlank(on) { blank.hidden = !on; if (!on) wake(); }
+  $('blackout').addEventListener('click', () => { document.activeElement?.blur(); setBlank(true); });
+  blank.addEventListener('click', () => setBlank(false));
+  document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => {
+    const sec = Number(b.dataset.sec);
+    writeInputs(sec);
+    running = false; clearInterval(tick); releaseWake();
+    setTotal(sec); start();
+  }));
+  [hIn, mIn, sIn].forEach(inp => {
+    inp.addEventListener('input', () => {
+      if (running) return;
+      setTotal(readInputs()); setLabel(); render();
+    });
+    inp.addEventListener('focus', () => inp.select());
+  });
+  // Normalise e.g. 90 seconds into 1 min 30 s when leaving a field.
+  [hIn, mIn, sIn].forEach(inp => inp.addEventListener('change', () => writeInputs(readInputs())));
+
+  document.addEventListener('keydown', e => {
+    // Any key brings the timer back from the black screen.
+    if (!blank.hidden) { e.preventDefault(); setBlank(false); return; }
+    if (['INPUT', 'BUTTON', 'SELECT'].includes(e.target.tagName)) return;
+    if (e.code === 'Space') { e.preventDefault(); running ? pause() : start(); }
+    else if (e.key === 'r' || e.key === 'R') reset();
+    else if (e.key === 'Escape' && finished) reset();
+    else if (e.key === 'f' || e.key === 'F') toggleFull();
+    else if (e.key === 'b' || e.key === 'B') setBlank(true);
+  });
+
+  warnSel.addEventListener('change', () => { store.set(warnSel.value, 'countdown-warn'); render(); });
+  const savedWarn = store.get('countdown-warn');
+  if ([...warnSel.options].some(o => o.value === savedWarn)) warnSel.value = savedWarn;
+
+  // Background styles. Each one sets the colour tokens so text stays readable on it.
+  const DARK = { '--fg': '#f2f4f7', '--muted': '#9aa3b2', '--line': 'rgba(255,255,255,.16)', '--field': 'rgba(255,255,255,.07)',
+                 '--accent': '#5b9dff', '--warn': '#ffb020', '--done': '#ff4438', 'color-scheme': 'dark' };
+  const LIGHT = { '--fg': '#14181f', '--muted': '#5f6876', '--line': 'rgba(0,0,0,.16)', '--field': 'rgba(255,255,255,.75)',
+                  '--accent': '#1f6feb', '--warn': '#c27a00', '--done': '#d92d20', 'color-scheme': 'light' };
+  const BGS = {
+    black:    { ...DARK, '--bg': '#000000' },
+    navy:     { ...DARK, '--bg': '#0d1b2e' },
+    forest:   { ...DARK, '--bg': '#0f2a22' },
+    wine:     { ...DARK, '--bg': '#2a0f1c' },
+    white:    { ...LIGHT, '--bg': '#ffffff' },
+    midnight: { ...DARK, '--bg': '#0b1020', '--bg-image': 'linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)' },
+    ocean:    { ...DARK, '--bg': '#06334a', '--bg-image': 'linear-gradient(160deg,#0a6a80,#06334a 55%,#0b1d3a)' },
+  };
+  const TOKEN_KEYS = ['--bg', '--bg-image', ...Object.keys(DARK)];
+  const isDark = hex => {
+    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 150;
+  };
+  const bgColor = $('bgColor');
+  function applyBg(name, custom) {
+    const st = document.body.style;
+    TOKEN_KEYS.forEach(k => st.removeProperty(k));
+    let tokens = BGS[name];
+    if (name === 'custom') tokens = { ...(isDark(custom) ? DARK : LIGHT), '--bg': custom };
+    if (tokens) Object.entries(tokens).forEach(([k, v]) => st.setProperty(k, v));
+    document.querySelectorAll('.swatch').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.bg === name)));
+    $('customWrap').classList.toggle('on', name === 'custom');
+    store.set({ name, custom }, 'countdown-bg');
+  }
+  document.querySelectorAll('.swatch').forEach(b => b.addEventListener('click', () => applyBg(b.dataset.bg)));
+  bgColor.addEventListener('input', () => applyBg('custom', bgColor.value));
+  const savedBg = store.get('countdown-bg');
+  if (savedBg && (BGS[savedBg.name] || savedBg.name === 'custom' && /^#[0-9a-f]{6}$/i.test(savedBg.custom || ''))) {
+    if (savedBg.custom) bgColor.value = savedBg.custom;
+    applyBg(savedBg.name, savedBg.custom);
+  } else applyBg('auto');
+
+  // Logo upload. Kept in this browser only; nothing is sent anywhere.
+  const LOGO_MAX = 2 * 1024 * 1024;
+  const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif'];
+  const logoBox = $('logoBox'), logoImg = $('logoImg'), logoMsg = $('logoMsg');
+  const logoPos = $('logoPos'), logoSize = $('logoSize'), logoFile = $('logoFile');
+  const infoBtn = $('logoInfo'), infoPop = $('logoPop');
+  let logoData = null;
+
+  function layoutLogo() {
+    const pos = logoPos.value;
+    logoBox.className = pos === 'center' ? logoSize.value : `${pos} ${logoSize.value}`;
+    logoBox.hidden = !logoData;
+    document.body.classList.toggle('logo-center', !!logoData && pos === 'center');
+    $('logoRemove').hidden = !logoData;
+    $('logoUpload').textContent = logoData ? 'Change logo' : 'Upload logo';
+  }
+  function saveLogo() {
+    try {
+      if (logoData) localStorage.setItem('countdown-logo', logoData); else localStorage.removeItem('countdown-logo');
+      return true;
+    } catch { return false; }
+  }
+  function saveLogoLayout() { store.set({ pos: logoPos.value, size: logoSize.value }, 'countdown-logo-layout'); }
+
+  $('logoUpload').addEventListener('click', () => logoFile.click());
+  logoFile.addEventListener('change', () => {
+    const f = logoFile.files[0];
+    logoFile.value = '';
+    if (!f) return;
+    if (!LOGO_TYPES.includes(f.type)) {
+      logoMsg.textContent = `That file type isn't supported. Use PNG, JPG, SVG, WebP or GIF.`;
+      return;
+    }
+    if (f.size > LOGO_MAX) {
+      logoMsg.textContent = `That file is ${(f.size / 1048576).toFixed(1)} MB. The limit is 2 MB; try exporting a smaller version.`;
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      logoData = reader.result; logoImg.src = logoData;
+      logoMsg.textContent = saveLogo() ? '' : 'Logo added, but this browser could not save it for next time.';
+      layoutLogo();
+    };
+    reader.onerror = () => { logoMsg.textContent = 'That file could not be read. Try saving it again and re-uploading.'; };
+    reader.readAsDataURL(f);
+  });
+  $('logoRemove').addEventListener('click', () => {
+    logoData = null; logoImg.removeAttribute('src'); logoMsg.textContent = '';
+    saveLogo(); layoutLogo();
+  });
+  [logoPos, logoSize].forEach(el => el.addEventListener('change', () => { layoutLogo(); saveLogoLayout(); }));
+
+  function setInfo(open) { infoPop.hidden = !open; infoBtn.setAttribute('aria-expanded', String(open)); }
+  infoBtn.addEventListener('click', e => { e.stopPropagation(); setInfo(infoPop.hidden); });
+  document.addEventListener('click', e => { if (!infoPop.hidden && !infoPop.contains(e.target)) setInfo(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setInfo(false); });
+
+  const savedLayout = store.get('countdown-logo-layout');
+  if (savedLayout) {
+    if ([...logoPos.options].some(o => o.value === savedLayout.pos)) logoPos.value = savedLayout.pos;
+    if ([...logoSize.options].some(o => o.value === savedLayout.size)) logoSize.value = savedLayout.size;
+  }
+  try { logoData = localStorage.getItem('countdown-logo'); } catch { logoData = null; }
+  if (logoData && /^data:image\//.test(logoData)) logoImg.src = logoData; else logoData = null;
+  layoutLogo();
+
+  // ---- Free trial, sign-up, paywall and license unlock (trial build only) ----
+  // The build script switches TRIAL_ON to true for the hosted free version and loads ../config.js,
+  // which sets window.SITE_CONFIG. Edit config.js, not these defaults.
+  const TRIAL_ON = true;
+  const CFG = Object.assign({
+    product: 'Big Countdown',
+    price: '$49',
+    trialMinutes: 5,
+    checkoutUrl: '',
+    leadEndpoint: '',
+    leadMode: 'no-cors',
+    googleClientId: '',
+    supportEmail: '',
+    termsUrl: '../terms.html',
+    privacyUrl: '../privacy.html',
+    myOrdersUrl: 'https://app.lemonsqueezy.com/my-orders',
+    licenseApi: 'https://api.lemonsqueezy.com/v1/licenses',
+    licenseProductId: ''
+  }, window.SITE_CONFIG || {});
+  const LIMIT_MS = CFG.trialMinutes * 60 * 1000;
+  let trialUsed = 0, lastTrialTick = 0, lastTrialSave = 0, trialLocked = false, licensed = false;
+  const gate = $('gate'), paywall = $('paywall'), licBox = $('license'), badge = $('trialBadge');
+
+  const getProfile = () => store.get('countdown-profile');
+  const getLicense = () => store.get('countdown-license');
+
+  function trialAllows() {
+    if (!TRIAL_ON || licensed) return true;
+    if (!getProfile()) { gate.hidden = false; return false; }
+    if (trialUsed >= LIMIT_MS) { lockOut(); return false; }
+    if (!store.get('countdown-trial-started')) { store.set(true, 'countdown-trial-started'); track('trial_started'); }
+    return true;
+  }
+  function trialTick() {
+    if (!TRIAL_ON || licensed || trialLocked) return;
+    const now = Date.now();
+    if (running && lastTrialTick) trialUsed += now - lastTrialTick;
+    lastTrialTick = running ? now : 0;
+    if (now - lastTrialSave > 1000 || !running) { store.set(trialUsed, 'countdown-trial-used'); lastTrialSave = now; }
+    const left = Math.max(0, Math.ceil((LIMIT_MS - trialUsed) / 1000));
+    $('trialLeft').textContent = `${Math.floor(left / 60)}:${pad(left % 60)}`;
+    if (trialUsed >= LIMIT_MS) lockOut();
+  }
+  function lockOut(silent) {
+    if (trialLocked) return;
+    trialLocked = true;
+    store.set(trialUsed, 'countdown-trial-used');
+    running = false; clearInterval(tick); releaseWake(); stopAlarm();
+    blank.hidden = true; badge.hidden = true; gate.hidden = true;
+    paywall.hidden = false;
+    if (!silent && !store.get('countdown-trial-ended')) { store.set(true, 'countdown-trial-ended'); track('trial_ended'); }
+  }
+  function unlock() {
+    licensed = true; trialLocked = false;
+    gate.hidden = paywall.hidden = licBox.hidden = badge.hidden = true;
+  }
+
+  // Events go to your CRM endpoint (sign-ups, trial use, purchases) and to Plausible if it is on the page.
+  function send(payload) {
+    if (!CFG.leadEndpoint) return Promise.resolve(true);
+    const json = CFG.leadMode === 'json';
+    return fetch(CFG.leadEndpoint, {
+      method: 'POST', mode: json ? 'cors' : 'no-cors', keepalive: true,
+      headers: { 'Content-Type': json ? 'application/json' : 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(r => json ? r.ok : true).catch(() => false);
+  }
+  function track(event, extra = {}) {
+    const p = getProfile() || {};
+    const payload = {
+      event, at: new Date().toISOString(), product: CFG.product, page: location.href,
+      email: p.email || '', firstName: p.firstName || '', lastName: p.lastName || '',
+      method: p.method || '', newsletter: !!p.newsletter, trialUsedSeconds: Math.round(trialUsed / 1000), ...extra
+    };
+    try { window.plausible && window.plausible(event); } catch {}
+    send(payload).then(ok => {
+      if (ok) return;
+      const q = store.get('countdown-outbox') || [];
+      q.push(payload); store.set(q.slice(-50), 'countdown-outbox');
+    });
+  }
+  async function flushOutbox() {
+    const q = store.get('countdown-outbox') || [];
+    if (!q.length) return;
+    const left = [];
+    for (const item of q) if (!(await send(item))) left.push(item);
+    store.set(left, 'countdown-outbox');
+  }
+
+  function register(person) {
+    const profile = { ...person, newsletter: $('leadNews').checked, signedUpAt: new Date().toISOString() };
+    store.set(profile, 'countdown-profile');
+    gate.hidden = true;
+    if (trialUsed >= LIMIT_MS) { lockOut(); } else { badge.hidden = false; trialTick(); }
+    track('signup', { termsAccepted: true });
+  }
+
+  // Sign-up form, with a nudge for common email typos.
+  const TYPOS = { 'gmial.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gamil.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gnail.com': 'gmail.com',
+    'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'outlok.com': 'outlook.com', 'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'iclod.com': 'icloud.com' };
+  const emailHint = $('emailHint');
+  $('leadEmail').addEventListener('blur', () => {
+    const v = $('leadEmail').value.trim(), dom = v.split('@')[1]?.toLowerCase();
+    if (dom && TYPOS[dom]) {
+      emailHint.innerHTML = '';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'linkbtn'; b.textContent = v.split('@')[0] + '@' + TYPOS[dom];
+      b.addEventListener('click', () => { $('leadEmail').value = b.textContent; emailHint.hidden = true; });
+      emailHint.append('Did you mean ', b, '?');
+      emailHint.hidden = false;
+    } else emailHint.hidden = true;
+  });
+  $('leadForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const first = $('leadFirst').value.trim(), last = $('leadLast').value.trim(), email = $('leadEmail').value.trim();
+    const err = $('leadErr');
+    if (!first || !last) { err.textContent = 'Enter your name and surname.'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { err.textContent = 'Enter a valid email address, like name@company.com.'; return; }
+    err.textContent = '';
+    register({ firstName: first, lastName: last, email, method: 'form' });
+  });
+
+  // Google sign-in: loads Google's button when a client ID is set.
+  function setupGoogle() {
+    const box = $('gbtn');
+    if (!CFG.googleClientId) {
+      box.innerHTML = '<button type="button" class="gfallback"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continue with Google</button>';
+      box.querySelector('button').addEventListener('click', () => {
+        $('leadErr').textContent = 'Google sign-in is not connected yet. Please use the form below.';
+      });
+      return;
+    }
+    const sc = document.createElement('script');
+    sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+    sc.onload = () => {
+      google.accounts.id.initialize({ client_id: CFG.googleClientId, callback: res => {
+        try {
+          const b64 = res.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          const info = JSON.parse(decodeURIComponent(escape(atob(b64))));
+          register({ firstName: info.given_name || '', lastName: info.family_name || '', email: info.email, method: 'google', emailVerified: !!info.email_verified });
+        } catch { $('leadErr').textContent = 'Google sign-in did not finish. Please use the form below.'; }
+      }});
+      google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 320 });
+    };
+    sc.onerror = () => { $('leadErr').textContent = 'Google sign-in could not load. Please use the form below.'; };
+    document.head.appendChild(sc);
+  }
+
+  // Checkout, prefilled with the trial user's name and email on Lemon Squeezy.
+  function checkoutHref() {
+    if (!CFG.checkoutUrl) return '';
+    try {
+      const u = new URL(CFG.checkoutUrl), p = getProfile();
+      if (u.hostname.endsWith('lemonsqueezy.com') && p) {
+        u.searchParams.set('checkout[email]', p.email);
+        u.searchParams.set('checkout[name]', `${p.firstName} ${p.lastName}`.trim());
+        u.searchParams.set('checkout[custom][source]', 'trial');
+      }
+      return u.toString();
+    } catch { return CFG.checkoutUrl; }
+  }
+  function wireBuy(a, from) {
+    a.addEventListener('click', e => {
+      const href = checkoutHref();
+      if (!href) { e.preventDefault(); $('payErr').textContent = 'The checkout link has not been added yet.'; return; }
+      a.href = href;
+      track('checkout_clicked', { from });
+    });
+  }
+
+  // License keys (Lemon Squeezy License API). A valid key unlocks this browser for good.
+  function showLicense() { licBox.hidden = false; $('licErr').textContent = ''; setTimeout(() => $('licKey').focus(), 50); }
+  async function licenseCall(action, params) {
+    const r = await fetch(`${CFG.licenseApi}/${action}`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(params)
+    });
+    return r.json();
+  }
+  $('licForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const key = $('licKey').value.trim(), err = $('licErr'), btn = $('licGo');
+    if (key.length < 8) { err.textContent = 'Paste the full license key from your purchase email.'; return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      const res = await licenseCall('activate', { license_key: key, instance_name: `${CFG.product} web · ${navigator.platform || 'browser'}` });
+      const wrongProduct = !!(res.activated && CFG.licenseProductId && String(res.meta?.product_id) !== String(CFG.licenseProductId));
+      if (res.activated && !wrongProduct) {
+        store.set({ key, instanceId: res.instance?.id || '', checkedAt: Date.now() }, 'countdown-license');
+        unlock(); track('license_activated');
+      } else {
+        err.textContent = wrongProduct ? 'That key belongs to a different product.'
+          : /limit/i.test(res.error || '') ? 'This key is already in use on the maximum number of devices. Write to support to move it.'
+          : 'That key was not accepted. Check it against your purchase email and try again.';
+        track('license_failed', { reason: res.error || (wrongProduct ? 'wrong product' : 'unknown') });
+      }
+    } catch {
+      err.textContent = 'Could not reach the license server. Check your internet connection and try again.';
+    }
+    btn.disabled = false; btn.textContent = 'Unlock';
+  });
+  $('licBack').addEventListener('click', () => { licBox.hidden = true; });
+  document.querySelectorAll('[data-open-license]').forEach(b => b.addEventListener('click', showLicense));
+
+  // Re-check a stored key once a week; refunded or disabled keys lock again.
+  async function recheckLicense(lic) {
+    if (Date.now() - (lic.checkedAt || 0) < 7 * 864e5) return;
+    try {
+      const res = await licenseCall('validate', { license_key: lic.key, ...(lic.instanceId ? { instance_id: lic.instanceId } : {}) });
+      if (res.valid) store.set({ ...lic, checkedAt: Date.now() }, 'countdown-license');
+      else if (res.license_key && ['disabled', 'expired'].includes(res.license_key.status)) {
+        try { localStorage.removeItem('countdown-license'); } catch {}
+        licensed = false; trialUsed = LIMIT_MS; lockOut(true);
+      }
+    } catch { /* offline: keep working */ }
+  }
+
+  $('offerBtn').addEventListener('click', () => {
+    const p = getProfile();
+    track('offer_requested');
+    $('offerMsg').textContent = p ? `Done. We'll email the offer to ${p.email}.` : "Done. We'll email you the offer.";
+    $('offerBtn').hidden = true;
+  });
+
+  if (TRIAL_ON) {
+    const fill = (sel, v) => document.querySelectorAll(sel).forEach(el => { el.textContent = v; });
+    fill('[data-price]', CFG.price); fill('[data-product]', CFG.product); fill('[data-minutes]', CFG.trialMinutes);
+    document.querySelectorAll('[data-terms]').forEach(a => { a.href = CFG.termsUrl; });
+    document.querySelectorAll('[data-privacy]').forEach(a => { a.href = CFG.privacyUrl; });
+    document.querySelectorAll('[data-orders]').forEach(a => { a.href = CFG.myOrdersUrl; });
+    if (CFG.supportEmail) { fill('[data-support]', CFG.supportEmail); document.querySelectorAll('[data-support-line]').forEach(el => { el.hidden = false; }); }
+    $('offerBtn').hidden = !CFG.leadEndpoint;
+    wireBuy($('payBuy'), 'paywall'); wireBuy($('badgeBuy'), 'badge');
+    const used = Number(store.get('countdown-trial-used'));
+    trialUsed = Number.isFinite(used) ? used : 0;
+    flushOutbox();
+    setupGoogle();
+    if (CFG.plausibleDomain) {
+      const pl = document.createElement('script');
+      pl.defer = true; pl.src = 'https://plausible.io/js/script.js'; pl.dataset.domain = CFG.plausibleDomain;
+      document.head.appendChild(pl);
+    }
+    const lic = getLicense();
+    if (lic && lic.key) { unlock(); recheckLicense(lic); }
+    else if (!getProfile()) gate.hidden = false;
+    else if (trialUsed >= LIMIT_MS) lockOut(true);
+    else { badge.hidden = false; trialTick(); }
+    if (!licensed && location.hash === '#unlock') showLicense();
+  }
+
+  // Boot with the last used duration, or 5 minutes.
+  const saved = store.get();
+  if (Number.isFinite(saved) && saved > 0) { writeInputs(saved); setTotal(saved); }
+  setLabel(); render();
+})();
+</script>
+</body>
+</html>
