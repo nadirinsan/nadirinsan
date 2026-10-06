@@ -124,6 +124,24 @@
   .presets button { padding: 11px 12px; font-family: var(--font-digits); font-weight: 500; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* Background picker: a row of swatches plus a custom colour. */
+  .bgpick { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+  .bgpick > span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+  .swatch {
+    width: 34px; height: 34px; padding: 0; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--sw);
+  }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+  .swatch.auto { background: linear-gradient(135deg, #eef0f3 50%, #0b0e13 50%); }
+  .custom { position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .custom input { width: 34px; height: 34px; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: none; cursor: pointer; }
+  .custom input::-webkit-color-swatch-wrapper { padding: 0; }
+  .custom input::-webkit-color-swatch { border: none; border-radius: 50%; }
+  .custom input::-moz-color-swatch { border: none; border-radius: 50%; }
+  .custom.on input { border-color: var(--accent); }
+  body { background-image: var(--bg-image, none); background-attachment: fixed; }
+  body.final, body.done { background-image: none; }
+
   .keys { width: 100%; text-align: center; font-size: 12px; color: var(--muted); }
   kbd {
     font: 500 11px var(--font-digits); padding: 1px 5px;
@@ -187,6 +205,18 @@
     <button type="button" id="reset">Reset</button>
     <button type="button" id="blackout">Black screen</button>
     <button type="button" id="full">Full screen</button>
+  </div>
+  <div class="bgpick" role="group" aria-label="Background">
+    <span>Background</span>
+    <button type="button" class="swatch auto" data-bg="auto" title="Auto (follows light/dark mode)" aria-label="Auto"></button>
+    <button type="button" class="swatch" data-bg="black" title="Black" aria-label="Black" style="--sw:#000"></button>
+    <button type="button" class="swatch" data-bg="navy" title="Navy" aria-label="Navy" style="--sw:#0d1b2e"></button>
+    <button type="button" class="swatch" data-bg="forest" title="Forest green" aria-label="Forest green" style="--sw:#0f2a22"></button>
+    <button type="button" class="swatch" data-bg="wine" title="Wine" aria-label="Wine" style="--sw:#2a0f1c"></button>
+    <button type="button" class="swatch" data-bg="white" title="White" aria-label="White" style="--sw:#fff"></button>
+    <button type="button" class="swatch" data-bg="midnight" title="Midnight gradient" aria-label="Midnight gradient" style="--sw:linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)"></button>
+    <button type="button" class="swatch" data-bg="ocean" title="Ocean gradient" aria-label="Ocean gradient" style="--sw:linear-gradient(160deg,#0a6a80,#06334a 55%,#0b1d3a)"></button>
+    <label class="custom" id="customWrap" title="Pick any colour"><input type="color" id="bgColor" value="#1e1e2e"> Custom</label>
   </div>
   <div class="keys">
     <kbd>Space</kbd> start / pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>B</kbd> black screen &nbsp; <kbd>Esc</kbd> stop alarm &nbsp; <kbd>Enter</kbd> start typed time
@@ -398,6 +428,44 @@
   warnSel.addEventListener('change', () => { store.set(warnSel.value, 'countdown-warn'); render(); });
   const savedWarn = store.get('countdown-warn');
   if ([...warnSel.options].some(o => o.value === savedWarn)) warnSel.value = savedWarn;
+
+  // Background styles. Each one sets the colour tokens so text stays readable on it.
+  const DARK = { '--fg': '#f2f4f7', '--muted': '#9aa3b2', '--line': 'rgba(255,255,255,.16)', '--field': 'rgba(255,255,255,.07)',
+                 '--accent': '#5b9dff', '--warn': '#ffb020', '--done': '#ff4438', 'color-scheme': 'dark' };
+  const LIGHT = { '--fg': '#14181f', '--muted': '#5f6876', '--line': 'rgba(0,0,0,.16)', '--field': 'rgba(255,255,255,.75)',
+                  '--accent': '#1f6feb', '--warn': '#c27a00', '--done': '#d92d20', 'color-scheme': 'light' };
+  const BGS = {
+    black:    { ...DARK, '--bg': '#000000' },
+    navy:     { ...DARK, '--bg': '#0d1b2e' },
+    forest:   { ...DARK, '--bg': '#0f2a22' },
+    wine:     { ...DARK, '--bg': '#2a0f1c' },
+    white:    { ...LIGHT, '--bg': '#ffffff' },
+    midnight: { ...DARK, '--bg': '#0b1020', '--bg-image': 'linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)' },
+    ocean:    { ...DARK, '--bg': '#06334a', '--bg-image': 'linear-gradient(160deg,#0a6a80,#06334a 55%,#0b1d3a)' },
+  };
+  const TOKEN_KEYS = ['--bg', '--bg-image', ...Object.keys(DARK)];
+  const isDark = hex => {
+    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 150;
+  };
+  const bgColor = $('bgColor');
+  function applyBg(name, custom) {
+    const st = document.body.style;
+    TOKEN_KEYS.forEach(k => st.removeProperty(k));
+    let tokens = BGS[name];
+    if (name === 'custom') tokens = { ...(isDark(custom) ? DARK : LIGHT), '--bg': custom };
+    if (tokens) Object.entries(tokens).forEach(([k, v]) => st.setProperty(k, v));
+    document.querySelectorAll('.swatch').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.bg === name)));
+    $('customWrap').classList.toggle('on', name === 'custom');
+    store.set({ name, custom }, 'countdown-bg');
+  }
+  document.querySelectorAll('.swatch').forEach(b => b.addEventListener('click', () => applyBg(b.dataset.bg)));
+  bgColor.addEventListener('input', () => applyBg('custom', bgColor.value));
+  const savedBg = store.get('countdown-bg');
+  if (savedBg && (BGS[savedBg.name] || savedBg.name === 'custom' && /^#[0-9a-f]{6}$/i.test(savedBg.custom || ''))) {
+    if (savedBg.custom) bgColor.value = savedBg.custom;
+    applyBg(savedBg.name, savedBg.custom);
+  } else applyBg('auto');
 
   // Boot with the last used duration, or 5 minutes.
   const saved = store.get();
