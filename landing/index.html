@@ -1,224 +1,193 @@
 <title>Big Countdown</title>
-<meta name="description" content="A full-screen countdown timer for speakers and events. Amber and red warnings, black screen between talks, your logo and colours. One file, works offline.">
+<meta name="description" content="The countdown timer anyone can run. Type the minutes, press Start. Background colours, black screen, your logo. Try free for 5 minutes, then $49 once for life.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Chivo+Mono:wght@300;400&family=Instrument+Sans:wght@400;500;600&family=Permanent+Marker&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <style>
-  /* Layout: a stage manager's world. Light run-sheet paper, black gaffer-tape labels written in marker,
-     and one dark confidence monitor in the hero running the real timer phases. Single light look by choice. */
+  /* Layout: the page is built from the timer's own parts. A working mini timer leads, then each
+     feature is shown with the real control it uses (preset chips, colour swatches, black screen, logo slot). */
   :root {
-    --paper: #eceee9;
-    --paper-2: #e2e5de;
-    --ink: #16181d;
-    --ink-2: #4b505a;
-    --rule: #c9cec5;
-    --tape: #1c1e23;
-    --tape-ink: #f4f4ef;
-    --screen: #0c0e12;
-    --screen-ink: #eef1f5;
-    --amber: #f0a202;
-    --red: #e0301e;
-    --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-    --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --fg: #14181f;
+    --muted: #5f6876;
+    --line: #d6dbe2;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --screen: #0b0e13;
+    --screen-ink: #eef2f7;
+    --warn: #f0a202;
+    --done: #e0301e;
+    --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-digits: "Chivo Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --font-marker: "Permanent Marker", "Comic Sans MS", "Bradley Hand", cursive;
-    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1016; --surface: #151a22; --fg: #eef2f7; --muted: #8d97a6; --line: #262d38;
+      --accent: #5b9dff; --accent-ink: #0b0e13; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1016; --surface: #151a22; --fg: #eef2f7; --muted: #8d97a6; --line: #262d38;
+    --accent: #5b9dff; --accent-ink: #0b0e13; color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--paper); color: var(--ink);
-    font: 400 17px/1.6 var(--font-body);
-    padding-inline: 20px;
-  }
-  .wrap { max-width: 1160px; margin-inline: auto; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.6 var(--font-ui); padding-inline: 20px; }
+  .wrap { max-width: 1120px; margin-inline: auto; }
   a { color: inherit; }
-  :focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
-  h1, h2, h3 { font-family: var(--font-display); font-weight: 900; line-height: .95; margin: 0; text-wrap: balance; text-transform: uppercase; letter-spacing: .005em; }
-  h2 { font-size: clamp(40px, 6vw, 72px); }
-  h3 { font-size: 26px; font-weight: 700; letter-spacing: .02em; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  h1, h2, h3 { margin: 0; line-height: 1.08; text-wrap: balance; letter-spacing: -0.02em; }
+  h1 { font-size: clamp(40px, 5.6vw, 68px); font-weight: 700; }
+  h2 { font-size: clamp(30px, 4vw, 46px); font-weight: 700; }
+  h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
   p { margin: 0; }
+  .eyebrow { font: 500 13px var(--font-digits); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
 
-  /* Gaffer tape label, written in marker. */
-  .tape {
-    display: inline-block; background: var(--tape); color: var(--tape-ink);
-    font: 400 15px/1 var(--font-marker); letter-spacing: .04em;
-    padding: 9px 16px 8px; transform: rotate(-1.6deg);
-    clip-path: polygon(0 6%, 3% 0, 97% 4%, 100% 0, 99% 50%, 100% 96%, 96% 100%, 4% 96%, 0 100%, 1% 50%);
-  }
-
-  /* Buttons */
   .btn {
-    display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
-    font: 600 17px var(--font-body); padding: 15px 24px; border-radius: 6px;
-    border: 2px solid var(--ink); transition: transform .15s, background .15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; cursor: pointer;
+    font: 600 16px var(--font-ui); padding: 14px 22px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--fg); transition: transform .15s, box-shadow .15s;
   }
-  .btn:hover { transform: translateY(-2px); }
-  .btn.primary { background: var(--ink); color: var(--paper); }
-  .btn.primary:hover { background: #000; }
-  .btn.ghost { background: transparent; color: var(--ink); }
-  .btn .price { font-family: var(--font-digits); font-weight: 400; opacity: .8; }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(20,24,31,.12); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn .sub { font-weight: 500; opacity: .8; }
 
-  /* Header */
-  header { padding-block: 22px; }
+  header { padding-block: 20px; }
   header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 900 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
-  .brand .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 25%, transparent); }
-  nav { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
-  nav a { text-decoration: none; font-weight: 500; font-size: 15px; color: var(--ink-2); }
-  nav a:hover { color: var(--ink); }
-  nav .btn { padding: 10px 18px; font-size: 15px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; text-decoration: none; }
+  .brand .mark { font: 500 13px var(--font-digits); background: var(--screen); color: var(--screen-ink); padding: 5px 7px; border-radius: 6px; }
+  nav { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  nav a:not(.btn) { text-decoration: none; color: var(--muted); font-weight: 500; font-size: 15px; }
+  nav a:not(.btn):hover { color: var(--fg); }
+  nav .btn { padding: 10px 16px; font-size: 15px; }
   @media (max-width: 760px) { nav a:not(.btn) { display: none; } }
 
   /* Hero */
-  .hero { padding-block: 40px 72px; }
-  .hero .wrap { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center; }
-  .hero h1 { font-size: clamp(56px, 8.4vw, 116px); margin-block: 22px 22px; }
-  .hero h1 em { font-style: normal; color: var(--red); }
-  .lede { font-size: 20px; color: var(--ink-2); max-width: 34ch; }
-  .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
-  .fineprint { margin-top: 16px; font-size: 14px; color: var(--ink-2); }
-  @media (max-width: 900px) { .hero .wrap { grid-template-columns: 1fr; gap: 40px; } }
+  .hero { padding-block: 36px 80px; }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
+  .hero h1 { margin-block: 14px 18px; }
+  .hero .lede { font-size: 20px; color: var(--muted); max-width: 32ch; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+  .note { margin-top: 14px; font-size: 14px; color: var(--muted); }
+  @media (max-width: 920px) { .hero .wrap { grid-template-columns: 1fr; gap: 36px; } }
 
-  /* The confidence monitor */
-  .monitor { min-width: 0; }
-  .bezel {
-    background: #2a2d33; padding: 14px; border-radius: 14px;
-    box-shadow: 0 30px 60px -20px rgba(22,24,29,.45), inset 0 0 0 1px rgba(255,255,255,.06);
+  /* Mini timer playground: same rules as the real app */
+  .play { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; box-shadow: 0 24px 50px -24px rgba(20,24,31,.35); min-width: 0; }
+  .pscreen {
+    container-type: inline-size; position: relative; aspect-ratio: 16 / 9; max-width: 100%;
+    border-radius: 10px; overflow: hidden;
+    background-color: var(--pbg, var(--screen)); background-image: var(--pimg, none); color: var(--pfg, var(--screen-ink));
+    transition: background-color .3s;
   }
-  .screen {
-    container-type: inline-size; position: relative; aspect-ratio: 16 / 10; max-width: 100%;
-    background: var(--screen); color: var(--screen-ink); border-radius: 4px; overflow: hidden;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3cqw;
-    transition: background .3s;
+  .pin { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.4cqw; }
+  .plabel { font: 600 2.4cqw/1 var(--font-ui); letter-spacing: .16em; text-transform: uppercase; min-height: 1em; opacity: .85; }
+  .pdigits { font: 300 22cqw/1 var(--font-digits); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .pbar { width: 84%; height: .9cqw; min-height: 4px; border-radius: 99px; background: rgba(127,127,127,.25); overflow: hidden; }
+  .pbar span { display: block; height: 100%; background: #5b9dff; transform-origin: left; transition: transform .25s linear; }
+  .plogo { position: absolute; top: 3.5cqw; left: 3.5cqw; font: 700 2.8cqw/1 var(--font-ui); letter-spacing: .04em; padding: 1.2cqw 1.8cqw; border-radius: 1cqw; background: #f0a202; color: #14181f; }
+  .pscreen.warn .pdigits, .pscreen.warn .plabel { color: var(--warn); }
+  .pscreen.warn .pbar span { background: var(--warn); }
+  .pscreen.final .pdigits, .pscreen.final .plabel { color: var(--done); }
+  .pscreen.final .pbar span { background: var(--done); }
+  .pscreen.final { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { filter: brightness(1.6) saturate(1.4); } }
+  .pscreen.done { background-color: var(--done); background-image: none; color: #fff; }
+  .pscreen.done .pbar span { background: #fff; }
+  .pblack { position: absolute; inset: 0; background: #000; display: grid; place-items: end center; padding-bottom: 4cqw; }
+  .pblack button { font: 600 2.4cqw var(--font-ui); color: #8a919c; background: transparent; border: 1px solid #2a2e34; border-radius: 1cqw; padding: 1.4cqw 2.4cqw; cursor: pointer; }
+  .pcontrols { display: grid; gap: 12px; padding: 16px 4px 4px; }
+  .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .prow .lbl { font: 500 11px var(--font-digits); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); width: 96px; }
+  .chip {
+    font: 500 14px var(--font-digits); padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg);
   }
-  .screen .slogo {
-    position: absolute; top: 4cqw; left: 4cqw; font: 900 3.4cqw/1 var(--font-display);
-    letter-spacing: .06em; text-transform: uppercase; padding: 1.2cqw 1.8cqw;
-    border: 2px solid currentColor; border-radius: 3px; opacity: .85;
-  }
-  .screen .slabel { font: 600 2.6cqw/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; min-height: 1em; opacity: .9; }
-  .screen .sdigits { font: 300 23cqw/1 var(--font-digits); font-variant-numeric: tabular-nums; letter-spacing: -.02em; transition: color .3s; }
-  .screen .sbar { width: 84%; height: 1cqw; min-height: 4px; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
-  .screen .sbar span { display: block; height: 100%; background: #5b9dff; transform-origin: left; transition: transform .25s linear, background .3s; }
-  .screen.warn .sdigits, .screen.warn .slabel { color: var(--amber); }
-  .screen.warn .sbar span { background: var(--amber); }
-  .screen.final .sdigits, .screen.final .slabel { color: var(--red); }
-  .screen.final .sbar span { background: var(--red); }
-  .screen.final { animation: pulse 1s ease-in-out infinite; }
-  @keyframes pulse { 50% { background: #3a0f0b; } }
-  .screen.done { background: var(--red); color: #fff; }
-  .screen.done .sbar span { background: #fff; }
-  .screen.done .slabel { font-size: 5cqw; font-weight: 600; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .chip.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-family: var(--font-ui); font-weight: 600; min-width: 84px; }
+  .sw { display: inline-block; width: 30px; height: 30px; border-radius: 50%; padding: 0; cursor: pointer; border: 2px solid var(--line); background: var(--c); }
+  .sw[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+  .static { cursor: default; }
+  @media (max-width: 480px) { .prow .lbl { width: 100%; } }
 
-  .phases { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; justify-content: center; }
-  .phase {
-    display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
-    padding: 6px 12px; border-radius: 99px; border: 1px solid var(--rule); color: var(--ink-2); background: transparent;
-    transition: background .2s, color .2s, border-color .2s;
-  }
-  .phase i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
-  .phase.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  .demo-note { text-align: center; font-size: 13px; color: var(--ink-2); margin-top: 10px; }
-
-  /* Venues strip */
-  .venues { border-block: 2px solid var(--ink); padding-block: 22px; }
-  .venues .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 28px; }
-  .venues span { font: 700 22px/1 var(--font-display); text-transform: uppercase; letter-spacing: .04em; }
-  .venues span.lead { font: 400 16px/1 var(--font-marker); text-transform: none; color: var(--ink-2); letter-spacing: 0; }
-
-  section.block { padding-block: 96px; }
-  .head { display: grid; gap: 18px; margin-bottom: 52px; max-width: 760px; }
-  .head .tape { justify-self: start; }
-  .head p { font-size: 19px; color: var(--ink-2); max-width: 56ch; }
-
-  /* Phase run-sheet: the real sequence a speaker sees */
-  .runsheet { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); }
-  .cue { padding: 22px 22px 26px 0; display: grid; gap: 14px; align-content: start; min-width: 0; }
-  .cue + .cue { padding-left: 22px; border-left: 1px solid var(--rule); }
-  .cue .cueno { font: 400 13px var(--font-digits); color: var(--ink-2); letter-spacing: .04em; }
-  .cue .chip { aspect-ratio: 16 / 9; max-width: 100%; border-radius: 6px; container-type: inline-size; display: grid; place-items: center; }
-  .cue .chip span { font: 300 17cqw/1 var(--font-digits); font-variant-numeric: tabular-nums; }
-  .cue p { color: var(--ink-2); font-size: 16px; }
-  .chip.c1 { background: var(--screen); color: var(--screen-ink); }
-  .chip.c2 { background: var(--screen); color: var(--amber); }
-  .chip.c3 { background: #3a0f0b; color: var(--red); }
-  .chip.c4 { background: var(--red); color: #fff; }
-  @media (max-width: 860px) {
-    .runsheet { grid-template-columns: 1fr 1fr; }
-    .cue:nth-child(3) { padding-left: 0; border-left: 0; }
-  }
-  @media (max-width: 480px) {
-    .runsheet { grid-template-columns: 1fr; }
-    .cue + .cue { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
-  }
-
-  /* Features */
-  .features { background: var(--paper-2); }
-  .flist { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px 40px; }
-  .feat { display: grid; gap: 10px; align-content: start; min-width: 0; }
-  .feat svg { width: 34px; height: 34px; stroke: var(--ink); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .feat p { color: var(--ink-2); font-size: 16px; }
-  @media (max-width: 860px) { .flist { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 560px) { .flist { grid-template-columns: 1fr; } }
+  section.block { padding-block: 88px; }
+  section.tight { padding-top: 0; }
+  .head { display: grid; gap: 14px; max-width: 680px; margin-bottom: 48px; }
+  .head p { font-size: 19px; color: var(--muted); }
 
   /* Steps */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; counter-reset: step; }
-  .step { display: grid; gap: 12px; align-content: start; min-width: 0; }
-  .step .n { font: 900 84px/.8 var(--font-display); color: var(--rule); }
-  .step p { color: var(--ink-2); font-size: 16px; }
-  .step kbd { font: 400 13px var(--font-digits); padding: 2px 7px; border: 1px solid var(--ink-2); border-bottom-width: 2px; border-radius: 4px; color: var(--ink); background: var(--paper); }
-  @media (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 26px; display: grid; gap: 12px; align-content: start; }
+  .step .num { font: 300 56px/1 var(--font-digits); color: var(--accent); }
+  .step p { color: var(--muted); font-size: 16px; }
+  .step kbd { font: 500 13px var(--font-digits); padding: 1px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--bg); color: var(--fg); }
+  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+
+  /* Feature rows: text beside the real control */
+  .feat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; padding-block: 28px; border-top: 1px solid var(--line); }
+  .feat .txt { display: grid; gap: 10px; }
+  .feat .txt p { color: var(--muted); max-width: 46ch; }
+  .demo { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; min-height: 120px; }
+  .mini { container-type: inline-size; width: min(100%, 300px); aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; position: relative; display: grid; place-items: center; }
+  .mini .d { font: 300 22cqw/1 var(--font-digits); }
+  .mini.black { background: #000; place-items: end center; }
+  .mini.black span { font: 600 5cqw var(--font-ui); color: #8a919c; border: 1px solid #2a2e34; border-radius: 1.5cqw; padding: 2cqw 4cqw; margin-bottom: 5cqw; }
+  .mini.logo { background: var(--screen); color: var(--screen-ink); }
+  .mini.logo .lg { position: absolute; top: 5cqw; left: 5cqw; font: 700 5cqw/1 var(--font-ui); padding: 2cqw 3cqw; border-radius: 1.5cqw; background: #f0a202; color: #14181f; }
+  .phase-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; }
+  .phase-row .mini { width: 100%; }
+  .phase-row small { display: block; text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .formats { font: 400 13px var(--font-digits); color: var(--muted); width: 100%; text-align: center; }
+  @media (max-width: 800px) { .feat { grid-template-columns: 1fr; gap: 20px; } }
 
   /* Pricing */
-  .pricing { background: var(--ink); color: var(--paper); }
-  .pricing .head p { color: #b9bdb5; }
-  .pricing .tape { background: var(--paper); color: var(--ink); }
-  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; }
-  .plan { border: 1px solid #3a3d44; border-radius: 10px; padding: 32px; display: grid; gap: 18px; align-content: start; min-width: 0; }
-  .plan.main { background: var(--paper); color: var(--ink); border-color: var(--paper); }
-  .plan .amount { font: 900 76px/.9 var(--font-display); }
-  .plan .amount small { font: 500 16px var(--font-body); margin-left: 6px; opacity: .7; }
-  .plan ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; font-size: 16px; }
+  .plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 880px; }
+  .plan { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 30px; display: grid; gap: 18px; align-content: start; }
+  .plan.paid { border: 2px solid var(--accent); }
+  .plan .tag { justify-self: start; font: 500 12px var(--font-digits); letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px; background: var(--bg); color: var(--muted); }
+  .plan.paid .tag { background: var(--accent); color: var(--accent-ink); }
+  .plan .amt { font: 300 64px/1 var(--font-digits); letter-spacing: -.03em; }
+  .plan .amt small { font: 500 15px var(--font-ui); color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+  .plan ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; font-size: 16px; }
   .plan li { display: flex; gap: 10px; }
-  .plan li::before { content: ""; flex: none; width: 9px; height: 9px; margin-top: 8px; border-radius: 50%; background: var(--red); }
-  .plan .btn { justify-content: center; }
-  .plan.main .btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
-  .plan:not(.main) .btn.ghost { color: var(--paper); border-color: var(--paper); }
-  .guarantee { margin-top: 28px; font-size: 15px; color: #b9bdb5; }
+  .plan li::before { content: "✓"; color: var(--accent); font-weight: 700; }
+  .plan li.no { color: var(--muted); }
+  .plan li.no::before { content: "–"; color: var(--muted); }
   @media (max-width: 720px) { .plans { grid-template-columns: 1fr; } }
 
   /* FAQ */
-  .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
-  details { border-top: 1px solid var(--rule); padding-block: 18px; min-width: 0; }
-  summary { cursor: pointer; font-weight: 600; font-size: 18px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  .faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 44px; }
+  details { border-top: 1px solid var(--line); padding-block: 16px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; display: flex; justify-content: space-between; gap: 14px; }
   summary::-webkit-details-marker { display: none; }
-  summary::after { content: "+"; font: 400 24px/1 var(--font-digits); color: var(--ink-2); }
+  summary::after { content: "+"; font: 400 22px/1 var(--font-digits); color: var(--muted); }
   details[open] summary::after { content: "–"; }
-  details p { margin-top: 10px; color: var(--ink-2); font-size: 16px; max-width: 60ch; }
+  details p { margin-top: 8px; color: var(--muted); font-size: 16px; }
   @media (max-width: 760px) { .faq { grid-template-columns: 1fr; } }
 
-  /* Final CTA + footer */
-  .final { text-align: left; padding-block: 96px; border-top: 2px solid var(--ink); }
-  .final .wrap { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 28px; }
-  .final h2 { font-size: clamp(48px, 7vw, 96px); }
-  footer { padding-block: 28px 40px; font-size: 14px; color: var(--ink-2); }
-  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-top: 1px solid var(--rule); padding-top: 24px; }
+  .final { padding-block: 80px; }
+  .final .box { background: var(--screen); color: var(--screen-ink); border-radius: 22px; padding: clamp(28px, 5vw, 56px); display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between; }
+  .final h2 { max-width: 16ch; }
+  .final .btn:not(.primary) { background: transparent; color: var(--screen-ink); border-color: #3a414d; }
+  .final .ctas { margin-top: 0; }
+  footer { padding-block: 24px 40px; font-size: 14px; color: var(--muted); }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 22px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .screen.final { animation: none; }
-    .btn, .screen, .screen .sdigits, .sbar span { transition: none; }
+    .pscreen.final { animation: none; }
+    .btn, .pbar span, .pscreen { transition: none; }
   }
 </style>
 
 <header>
   <div class="wrap">
-    <a class="brand" href="#top" data-name-host><span class="dot" aria-hidden="true"></span><span data-name>Big Countdown</span></a>
+    <a class="brand" href="#top"><span class="mark">05:00</span><span data-name>Big Countdown</span></a>
     <nav aria-label="Main">
-      <a href="#how">How it works</a>
       <a href="#features">Features</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
-      <a class="btn primary" data-buy href="#pricing">Buy now</a>
+      <a class="btn" data-app href="app/index.html">Try free</a>
+      <a class="btn primary" data-buy href="#pricing">Buy <span data-price>$49</span></a>
     </nav>
   </div>
 </header>
@@ -227,220 +196,214 @@
   <section class="hero">
     <div class="wrap">
       <div>
-        <span class="tape">For speakers, hosts &amp; stage managers</span>
-        <h1>Keep every speaker <em>on time.</em></h1>
-        <p class="lede">A full-screen countdown for the stage monitor. Speakers see amber when time is short and red when it's over, so nobody has to wave at them from the back.</p>
+        <span class="eyebrow">Countdown timer for any screen</span>
+        <h1>Type the minutes. Press Start. Done.</h1>
+        <p class="lede">A big, clear countdown for your monitor or projector. Pick a background, add your logo, blank the screen when you need to.</p>
         <div class="ctas">
-          <a class="btn primary" data-buy href="#pricing">Buy <span data-name>Big Countdown</span> <span class="price" data-price>$19</span></a>
-          <a class="btn ghost" href="#how">See how it works</a>
+          <a class="btn primary" data-app href="app/index.html">Try free for 5 minutes</a>
+          <a class="btn" data-buy href="#pricing">Buy for <span data-price>$49</span> <span class="sub">lifetime</span></a>
         </div>
-        <p class="fineprint">One-time payment. One file. Works offline on Windows, Mac and Linux.</p>
+        <p class="note">Sign up with Google or your email. No card needed for the trial.</p>
       </div>
 
-      <div class="monitor" aria-label="Live demo of the timer">
-        <div class="bezel">
-          <div class="screen" id="demo">
-            <div class="slogo" aria-hidden="true">Your logo</div>
-            <div class="slabel" id="dLabel">Ready</div>
-            <div class="sdigits" id="dTime">00:30</div>
-            <div class="sbar"><span id="dBar"></span></div>
+      <div class="play" aria-label="Try the timer here">
+        <div class="pscreen" id="ps">
+          <div class="pin">
+            <div class="plogo" id="plogo" hidden>YOUR LOGO</div>
+            <div class="plabel" id="plabel">Ready</div>
+            <div class="pdigits" id="pdigits">00:15</div>
+            <div class="pbar"><span id="pbar"></span></div>
+          </div>
+          <div class="pblack" id="pblack" hidden><button type="button" id="pback">Back to timer</button></div>
+        </div>
+        <div class="pcontrols">
+          <div class="prow">
+            <span class="lbl">Time</span>
+            <button type="button" class="chip" data-sec="15" aria-pressed="true">15s</button>
+            <button type="button" class="chip" data-sec="60" aria-pressed="false">1m</button>
+            <button type="button" class="chip" data-sec="300" aria-pressed="false">5m</button>
+            <button type="button" class="chip" data-sec="600" aria-pressed="false">10m</button>
+            <button type="button" class="chip go" id="pgo">Start</button>
+          </div>
+          <div class="prow">
+            <span class="lbl">Background</span>
+            <button type="button" class="sw" data-bg="#0b0e13" style="--c:#0b0e13" aria-label="Dark" aria-pressed="true"></button>
+            <button type="button" class="sw" data-bg="#0d1b2e" style="--c:#0d1b2e" aria-label="Navy" aria-pressed="false"></button>
+            <button type="button" class="sw" data-bg="#0f2a22" style="--c:#0f2a22" aria-label="Forest green" aria-pressed="false"></button>
+            <button type="button" class="sw" data-bg="#2a0f1c" style="--c:#2a0f1c" aria-label="Wine" aria-pressed="false"></button>
+            <button type="button" class="sw" data-bg="#ffffff" data-fg="#14181f" style="--c:#ffffff" aria-label="White" aria-pressed="false"></button>
+            <button type="button" class="sw" data-bg="#0b1020" data-img="linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)" style="--c:linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)" aria-label="Midnight gradient" aria-pressed="false"></button>
+          </div>
+          <div class="prow">
+            <span class="lbl">Extras</span>
+            <button type="button" class="chip" id="plogoBtn" aria-pressed="false">Show logo</button>
+            <button type="button" class="chip" id="pblackBtn">Black screen</button>
           </div>
         </div>
-        <div class="phases" aria-hidden="true">
-          <span class="phase" data-p="run" style="--c:#5b9dff"><i></i>Talking</span>
-          <span class="phase" data-p="warn" style="--c:var(--amber)"><i></i>Wrap up</span>
-          <span class="phase" data-p="final" style="--c:var(--red)"><i></i>Final 10 sec</span>
-          <span class="phase" data-p="done" style="--c:var(--red)"><i></i>Time's up</span>
-        </div>
-        <p class="demo-note">Live demo: a 30-second talk, sped up to run on a loop.</p>
       </div>
     </div>
   </section>
-
-  <div class="venues">
-    <div class="wrap">
-      <span class="lead">Made for</span>
-      <span>Conferences</span>
-      <span>Workshops</span>
-      <span>Pitch nights</span>
-      <span>Panels</span>
-      <span>Classrooms</span>
-      <span>Worship services</span>
-    </div>
-  </div>
 
   <section class="block" id="how">
     <div class="wrap">
       <div class="head">
-        <span class="tape">What the speaker sees</span>
-        <h2>Four cues. No hand signals.</h2>
-        <p>You pick when the warning starts: the last 30 seconds, 1, 2 or 5 minutes. From there the screen does the talking.</p>
-      </div>
-      <div class="runsheet">
-        <div class="cue">
-          <span class="cueno">CUE 1 · TALKING</span>
-          <div class="chip c1"><span>12:00</span></div>
-          <h3>Digits fill the screen</h3>
-          <p>The numbers resize to the monitor, so they read from the stage and the back row.</p>
-        </div>
-        <div class="cue">
-          <span class="cueno">CUE 2 · WRAP UP</span>
-          <div class="chip c2"><span>00:58</span></div>
-          <h3>Amber warning</h3>
-          <p>The time turns amber and the screen says "Time is almost up".</p>
-        </div>
-        <div class="cue">
-          <span class="cueno">CUE 3 · FINAL 10 SEC</span>
-          <div class="chip c3"><span>00:07</span></div>
-          <h3>Red pulse</h3>
-          <p>In the last ten seconds the digits go red and the screen gently pulses.</p>
-        </div>
-        <div class="cue">
-          <span class="cueno">CUE 4 · TIME'S UP</span>
-          <div class="chip c4"><span>+00:12</span></div>
-          <h3>Solid red, counting over</h3>
-          <p>The screen turns red with a short beep and shows how far over the speaker is.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="block features" id="features">
-    <div class="wrap">
-      <div class="head">
-        <span class="tape">In the box</span>
-        <h2>Built for the room, not the desk.</h2>
-      </div>
-      <div class="flist">
-        <div class="feat">
-          <svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="6" width="28" height="18" rx="2"/><path d="M12 30h10M17 24v6"/></svg>
-          <h3>Any time, no date</h3>
-          <p>Type hours, minutes and seconds, or tap a preset: 30s, 1m, 5m, 10m, 30m or 1h. Press Space to start.</p>
-        </div>
-        <div class="feat">
-          <svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="6" width="28" height="18" rx="2" fill="currentColor"/><path d="M12 30h10M17 24v6"/></svg>
-          <h3>Black screen</h3>
-          <p>Blank the monitor between talks with one click or the B key. The timer keeps running underneath.</p>
-        </div>
-        <div class="feat">
-          <svg viewBox="0 0 34 34" aria-hidden="true"><rect x="5" y="5" width="24" height="24" rx="3"/><circle cx="13" cy="13" r="3"/><path d="M5 25l8-7 6 5 4-3 6 5"/></svg>
-          <h3>Your logo</h3>
-          <p>Upload a PNG, JPG, SVG, WebP or GIF up to 2 MB. Place it top left, centre or right, in three sizes.</p>
-        </div>
-        <div class="feat">
-          <svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="13"/><path d="M17 4a13 13 0 0 0 0 26z" fill="currentColor"/></svg>
-          <h3>Your colours</h3>
-          <p>Black, navy, forest, wine, white, two gradients, or any colour you pick. Text stays readable on each.</p>
-        </div>
-        <div class="feat">
-          <svg viewBox="0 0 34 34" aria-hidden="true"><path d="M9 4h11l6 6v20H9z"/><path d="M20 4v6h6"/><path d="M13 19l3 3 6-6"/></svg>
-          <h3>One file, no install</h3>
-          <p>Double-click to open it in your browser. No account, no app store, no internet needed at the venue.</p>
-        </div>
-        <div class="feat">
-          <svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="9" width="28" height="16" rx="2"/><path d="M8 14h2M13 14h2M18 14h2M23 14h3M9 20h16"/></svg>
-          <h3>Run it from the keyboard</h3>
-          <p>Space starts and pauses, R resets, F goes full screen, B blanks the screen, Esc stops the alarm.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="block">
-    <div class="wrap">
-      <div class="head">
-        <span class="tape">Set up in a minute</span>
-        <h2>Download. Open. Press Space.</h2>
+        <span class="eyebrow">Setup</span>
+        <h2>Ready in three steps</h2>
+        <p>No install, no settings menus. If you can type a number, you can run it.</p>
       </div>
       <div class="steps">
         <div class="step">
-          <span class="n">1</span>
-          <h3>Download the file</h3>
-          <p>You get one HTML file right after checkout. Copy it to the laptop that drives the stage monitor.</p>
+          <span class="num">1</span>
+          <h3>Pick a time</h3>
+          <p>Type hours, minutes and seconds, or tap a ready-made time: 30s, 1m, 5m, 10m, 30m or 1h.</p>
         </div>
         <div class="step">
-          <span class="n">2</span>
-          <h3>Open it full screen</h3>
-          <p>Double-click to open it in Chrome, Edge, Safari or Firefox, then press <kbd>F</kbd>. Add your logo and colours once; they're remembered.</p>
+          <span class="num">2</span>
+          <h3>Make it yours</h3>
+          <p>Choose a background colour and upload your logo. It remembers both for next time.</p>
         </div>
         <div class="step">
-          <span class="n">3</span>
-          <h3>Type the time, press Space</h3>
-          <p>Enter the slot length and press <kbd>Space</kbd>. The controls hide themselves while the clock runs.</p>
+          <span class="num">3</span>
+          <h3>Press Start</h3>
+          <p>Press <kbd>Space</kbd> to start and <kbd>F</kbd> for full screen. The buttons hide while it counts.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="block pricing" id="pricing">
+  <section class="block tight" id="features">
     <div class="wrap">
       <div class="head">
-        <span class="tape">Pricing</span>
-        <h2>Pay once. Use it at every event.</h2>
-        <p>No subscription and no per-event fee.</p>
+        <span class="eyebrow">Features</span>
+        <h2>Everything on one screen</h2>
+      </div>
+      <div class="feat">
+        <div class="txt">
+          <h3>Ready-made times</h3>
+          <p>One tap starts a common slot. Or type any length you need, from a few seconds to many hours. No dates, no clock settings.</p>
+        </div>
+        <div class="demo" aria-hidden="true">
+          <span class="chip static">30s</span><span class="chip static">1m</span><span class="chip static">5m</span><span class="chip static">10m</span><span class="chip static">30m</span><span class="chip static">1h</span>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="txt">
+          <h3>Choose your background</h3>
+          <p>Black, navy, forest green, wine, white, two gradients, or any colour you pick. The numbers adjust so they stay easy to read.</p>
+        </div>
+        <div class="demo" aria-hidden="true">
+          <span class="sw static" style="--c:#000"></span><span class="sw static" style="--c:#0d1b2e"></span><span class="sw static" style="--c:#0f2a22"></span><span class="sw static" style="--c:#2a0f1c"></span><span class="sw static" style="--c:#fff"></span><span class="sw static" style="--c:linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)"></span><span class="sw static" style="--c:linear-gradient(160deg,#0a6a80,#06334a 55%,#0b1d3a)"></span><span class="sw static" style="--c:conic-gradient(#f0a202,#e0301e,#5b9dff,#2fb36d,#f0a202)"></span>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="txt">
+          <h3>Black screen when you need it</h3>
+          <p>Between speakers or during a break, one click turns the screen black. The timer keeps running, and one click brings it back.</p>
+        </div>
+        <div class="demo" aria-hidden="true"><div class="mini black"><span>Back to timer</span></div></div>
+      </div>
+      <div class="feat">
+        <div class="txt">
+          <h3>Your logo on screen</h3>
+          <p>Upload your logo and place it top left, centre or right in three sizes. It stays on your computer and is never uploaded anywhere.</p>
+        </div>
+        <div class="demo" aria-hidden="true">
+          <div class="mini logo"><span class="lg">YOUR LOGO</span><span class="d">05:00</span></div>
+          <span class="formats">PNG · JPG · SVG · WebP · GIF · up to 2 MB</span>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="txt">
+          <h3>Warnings anyone can read</h3>
+          <p>The numbers turn amber when time is nearly up and red in the last ten seconds. At zero the screen turns red and counts the extra time.</p>
+        </div>
+        <div class="demo" aria-hidden="true">
+          <div class="phase-row">
+            <div><div class="mini" style="background:var(--screen);color:var(--warn)"><span class="d">00:58</span></div><small>Almost up</small></div>
+            <div><div class="mini" style="background:#3a0f0b;color:var(--done)"><span class="d">00:07</span></div><small>Final seconds</small></div>
+            <div><div class="mini" style="background:var(--done);color:#fff"><span class="d">+0:12</span></div><small>Time's up</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="txt">
+          <h3>Works offline, on any computer</h3>
+          <p>The full version is a single file. Double-click it on Windows, Mac, Linux or a Chromebook. No install, no account, no internet needed at the venue.</p>
+        </div>
+        <div class="demo" aria-hidden="true">
+          <span class="chip static">Windows</span><span class="chip static">Mac</span><span class="chip static">Linux</span><span class="chip static">Chromebook</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="pricing">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Pricing</span>
+        <h2>Try it free. Buy once for life.</h2>
+        <p>Use the full timer for 5 minutes for free. If you like it, pay once and it's yours.</p>
       </div>
       <div class="plans">
-        <div class="plan main">
-          <h3>Standard</h3>
-          <div class="amount"><span data-price>$19</span><small>one-time</small></div>
-          <ul>
-            <li>The full timer as one offline file</li>
-            <li>Amber and red warnings, black screen, alarm</li>
-            <li>Upload your logo, pick your colours</li>
-            <li>Use it on all your own computers</li>
-            <li>Free updates</li>
-          </ul>
-          <a class="btn primary" data-buy href="#pricing">Buy for <span data-price>$19</span></a>
-        </div>
         <div class="plan">
-          <h3>Branded edition</h3>
-          <div class="amount"><span data-price-branded>$79</span><small>one-time</small></div>
+          <span class="tag">Free trial</span>
+          <div class="amt">$0</div>
           <ul>
-            <li>Everything in Standard</li>
-            <li>We build your logo and brand colours into the file</li>
-            <li>Your event or company name in the browser tab</li>
-            <li>Ready to hand to every operator on your team</li>
+            <li>Every feature, in your browser</li>
+            <li>5 minutes of countdown, one time</li>
+            <li>Sign up with Google or email</li>
+            <li class="no">Stops after 5 minutes</li>
           </ul>
-          <a class="btn ghost" data-buy-branded href="#faq">Order the branded edition</a>
+          <a class="btn" data-app href="app/index.html">Start free trial</a>
+        </div>
+        <div class="plan paid">
+          <span class="tag">Lifetime</span>
+          <div class="amt"><span data-price>$49</span><small>one-time</small></div>
+          <ul>
+            <li>Unlimited countdowns, any length</li>
+            <li>Background colours, black screen, your logo</li>
+            <li>Works offline as one file</li>
+            <li>No subscription, ever</li>
+          </ul>
+          <a class="btn primary" data-buy href="#pricing">Buy for <span data-price>$49</span></a>
         </div>
       </div>
-      <p class="guarantee">Not right for your event? Ask for a refund within 14 days.</p>
     </div>
   </section>
 
-  <section class="block" id="faq">
+  <section class="block tight" id="faq">
     <div class="wrap">
       <div class="head">
-        <span class="tape">Questions</span>
-        <h2>Before you buy</h2>
+        <span class="eyebrow">FAQ</span>
+        <h2>Questions</h2>
       </div>
       <div class="faq">
         <div>
           <details open>
-            <summary>Do I need internet at the venue?</summary>
-            <p>No. Everything runs from the file on your computer. Without internet it uses your computer's built-in fonts instead of the designed ones; everything else works the same.</p>
+            <summary>What happens after the free 5 minutes?</summary>
+            <p>The timer stops and offers lifetime access for <span data-price>$49</span>. Your settings stay as they are.</p>
           </details>
           <details>
-            <summary>Which computers does it work on?</summary>
-            <p>Any Windows, Mac, Linux or Chromebook computer with a current version of Chrome, Edge, Safari or Firefox. Nothing gets installed.</p>
+            <summary>Is it a subscription?</summary>
+            <p>No. You pay <span data-price>$49</span> once and use it for as long as you like.</p>
           </details>
           <details>
-            <summary>Can I show it on a second screen or projector?</summary>
-            <p>Yes. Drag the browser window to the monitor facing the speaker and press F for full screen.</p>
+            <summary>How do I get the full version?</summary>
+            <p>Right after payment you receive the full timer as a file by email. Open it in any browser and there is no time limit.</p>
           </details>
         </div>
         <div>
           <details>
-            <summary>Where does my logo go when I upload it?</summary>
-            <p>Nowhere. It stays in the browser on that computer and is never sent to us or anyone else.</p>
+            <summary>Do I need internet?</summary>
+            <p>The free trial runs in your browser. The full version works offline at the venue.</p>
           </details>
           <details>
-            <summary>Will the beep play?</summary>
-            <p>Yes, once you start the timer with a click or key press. Browsers block sound until you interact with the page.</p>
+            <summary>Can I show it on a projector or second screen?</summary>
+            <p>Yes. Move the window to that screen and press F for full screen.</p>
           </details>
           <details>
-            <summary>How do I get the branded edition?</summary>
-            <p>Buy it and reply to the receipt email with your logo file and brand colours. You get your custom file back within two working days.</p>
+            <summary>Where is my logo stored?</summary>
+            <p>Only in the browser on your computer. It is never sent to us or anyone else.</p>
           </details>
         </div>
       </div>
@@ -449,8 +412,13 @@
 
   <section class="final">
     <div class="wrap">
-      <h2>Next speaker's up.<br>Be ready.</h2>
-      <a class="btn primary" data-buy href="#pricing">Buy <span data-name>Big Countdown</span> <span class="price" data-price>$19</span></a>
+      <div class="box">
+        <h2>Try it on your own screen in a minute.</h2>
+        <div class="ctas">
+          <a class="btn primary" data-app href="app/index.html">Try free for 5 minutes</a>
+          <a class="btn" data-buy href="#pricing">Buy for <span data-price>$49</span></a>
+        </div>
+      </div>
     </div>
   </section>
 </main>
@@ -458,7 +426,7 @@
 <footer>
   <div class="wrap">
     <span>© <span id="year">2026</span> <span data-name>Big Countdown</span></span>
-    <span>Questions: <span data-email>hello@example.com</span></span>
+    <span>Questions? <span data-email>hello@example.com</span></span>
   </div>
 </footer>
 
@@ -467,46 +435,61 @@
   // ---- Edit these before you go live ----
   const CONFIG = {
     name: 'Big Countdown',
-    price: '$19',
-    brandedPrice: '$79',
-    buyUrl: '',          // e.g. your Gumroad / Lemon Squeezy / Payhip checkout link
-    brandedBuyUrl: '',   // checkout link for the branded edition
+    price: '$49',
+    appUrl: 'app/index.html',   // where the free trial lives
+    buyUrl: '',                 // checkout link (Lemon Squeezy, Gumroad, Paddle, Stripe Payment Link...)
     email: 'hello@example.com'
   };
   // ---------------------------------------
+  const $ = id => document.getElementById(id);
+  const all = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
+  all('[data-name]', el => { el.textContent = CONFIG.name; });
+  all('[data-price]', el => { el.textContent = CONFIG.price; });
+  all('[data-email]', el => { el.textContent = CONFIG.email; });
+  all('[data-app]', a => { a.href = CONFIG.appUrl; });
+  if (CONFIG.buyUrl) all('[data-buy]', a => { a.href = CONFIG.buyUrl; a.target = '_blank'; a.rel = 'noopener'; });
+  $('year').textContent = new Date().getFullYear();
 
-  const setAll = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
-  setAll('[data-name]', el => { el.textContent = CONFIG.name; });
-  setAll('[data-price]', el => { el.textContent = CONFIG.price; });
-  setAll('[data-price-branded]', el => { el.textContent = CONFIG.brandedPrice; });
-  setAll('[data-email]', el => { el.textContent = CONFIG.email; });
-  if (CONFIG.buyUrl) setAll('[data-buy]', a => { a.href = CONFIG.buyUrl; a.target = '_blank'; a.rel = 'noopener'; });
-  if (CONFIG.brandedBuyUrl) setAll('[data-buy-branded]', a => { a.href = CONFIG.brandedBuyUrl; a.target = '_blank'; a.rel = 'noopener'; });
-  document.getElementById('year').textContent = new Date().getFullYear();
-
-  // ---- Hero demo: a 30-second talk that loops through the real phases ----
-  const screen = document.getElementById('demo');
-  const tEl = document.getElementById('dTime'), lEl = document.getElementById('dLabel'), bar = document.getElementById('dBar');
-  const phases = document.querySelectorAll('.phase');
-  const TOTAL = 30, WARN = 20, FINAL = 10, OVER = 4;
+  // ---- Mini timer: same warning rules as the real app (amber in the last minute, red in the last 10 s) ----
+  const ps = $('ps'), dEl = $('pdigits'), lEl = $('plabel'), bar = $('pbar'), go = $('pgo');
+  let total = 15, endAt = 0, left = 15000, running = false, iv = null;
   const pad = n => String(n).padStart(2, '0');
-  let t = 0; // seconds elapsed in the loop
-
-  function frame() {
-    const left = TOTAL - t;
-    let phase = 'run';
-    if (left <= 0) phase = 'done';
-    else if (left <= FINAL) phase = 'final';
-    else if (left <= WARN) phase = 'warn';
-    screen.className = 'screen' + (phase === 'run' ? '' : ' ' + phase);
-    tEl.textContent = left >= 0 ? `${pad(Math.floor(left / 60))}:${pad(left % 60)}` : `+00:${pad(-left)}`;
-    lEl.textContent = { run: '', warn: 'Time is almost up', final: 'Final seconds', done: "Time's up" }[phase];
-    bar.style.transform = `scaleX(${Math.max(0, left) / TOTAL})`;
-    phases.forEach(p => p.classList.toggle('on', p.dataset.p === phase));
-    t = t >= TOTAL + OVER ? 0 : t + 1;
+  function fmt(ms) {
+    const neg = ms < 0, s = neg ? Math.floor(-ms / 1000) : Math.ceil(ms / 1000);
+    return (neg ? '+' : '') + pad(Math.floor(s / 60)) + ':' + pad(s % 60);
   }
-  frame();
-  // Sped up: one demo second every 0.45s so the whole cycle shows in about 15 seconds.
-  setInterval(frame, 450);
+  function draw() {
+    const ms = running ? endAt - Date.now() : left;
+    dEl.textContent = fmt(ms);
+    bar.style.transform = `scaleX(${Math.max(0, Math.min(1, ms / (total * 1000)))})`;
+    const done = running && ms <= 0, final = running && ms > 0 && ms <= 10000, warn = running && ms > 10000 && ms <= 60000;
+    ps.classList.toggle('done', done); ps.classList.toggle('final', final); ps.classList.toggle('warn', warn);
+    lEl.textContent = done ? "Time's up" : final ? 'Final seconds' : warn ? 'Time is almost up' : running ? '' : (left < total * 1000 ? 'Paused' : 'Ready');
+    if (done && ms < -8000) stop(true);
+  }
+  function startP() { running = true; endAt = Date.now() + left; clearInterval(iv); iv = setInterval(draw, 100); go.textContent = 'Pause'; draw(); }
+  function stop(resetIt) {
+    if (running) left = endAt - Date.now();
+    running = false; clearInterval(iv); go.textContent = 'Start';
+    if (resetIt || left <= 0) left = total * 1000;
+    draw();
+  }
+  go.addEventListener('click', () => running ? stop(false) : startP());
+  all('.chip[data-sec]', b => b.addEventListener('click', () => {
+    all('.chip[data-sec]', x => x.setAttribute('aria-pressed', String(x === b)));
+    total = Number(b.dataset.sec); running = false; clearInterval(iv); left = total * 1000; startP();
+  }));
+  all('.sw[data-bg]', b => b.addEventListener('click', () => {
+    all('.sw[data-bg]', x => x.setAttribute('aria-pressed', String(x === b)));
+    ps.style.setProperty('--pbg', b.dataset.bg);
+    ps.style.setProperty('--pimg', b.dataset.img || 'none');
+    ps.style.setProperty('--pfg', b.dataset.fg || '#eef2f7');
+  }));
+  $('plogoBtn').addEventListener('click', e => {
+    const on = $('plogo').hidden; $('plogo').hidden = !on; e.currentTarget.setAttribute('aria-pressed', String(on));
+  });
+  $('pblackBtn').addEventListener('click', () => { $('pblack').hidden = false; });
+  $('pback').addEventListener('click', () => { $('pblack').hidden = true; });
+  draw();
 })();
 </script>

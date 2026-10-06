@@ -183,6 +183,56 @@
   .logomsg { width: 100%; text-align: center; font-size: 12px; color: var(--done); min-height: 0; }
   .logomsg:empty { display: none; }
 
+  /* Free trial: sign-up gate, paywall and the minutes-left badge (trial build only). */
+  .overlay {
+    position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+    padding: 16px; overflow-y: auto;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .card {
+    width: min(440px, 100%); background: var(--bg); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 16px; padding: 28px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.25);
+    display: grid; gap: 14px;
+  }
+  .card h2 { margin: 0; font: 600 26px/1.15 var(--font-ui); text-wrap: balance; }
+  .card p { margin: 0; color: var(--muted); line-height: 1.5; }
+  .card .big { font: 300 64px/1 var(--font-digits); color: var(--fg); }
+  .card .big small { font: 500 15px var(--font-ui); color: var(--muted); margin-left: 6px; }
+  .card form { display: grid; gap: 10px; }
+  .card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card label.f { display: grid; gap: 4px; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+  .card input[type="text"], .card input[type="email"], .card input[type="password"] {
+    width: 100%; padding: 11px 12px; font: 400 16px var(--font-ui);
+    background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .card .consent { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .card .consent input { margin-top: 2px; }
+  .card .wide { width: 100%; justify-content: center; padding: 13px 16px; font-size: 16px; }
+  .card .or { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .card .or::before, .card .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .card .err { color: var(--done); font-size: 13px; }
+  .card .err:empty { display: none; }
+  .card ul { margin: 0; padding-left: 18px; color: var(--fg); line-height: 1.7; font-size: 15px; }
+  .card .small { font-size: 12px; }
+  #gbtn { display: flex; justify-content: center; min-height: 44px; }
+  .gfallback { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px 16px; }
+  .gfallback svg { width: 18px; height: 18px; }
+  a.btnlink {
+    display: block; text-align: center; text-decoration: none; border-radius: 8px;
+    font: 600 16px var(--font-ui); background: var(--accent); color: #fff; border: 1px solid var(--accent);
+  }
+  #trialBadge {
+    position: fixed; z-index: 6; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+    padding: 6px 6px 6px 14px; border-radius: 99px;
+    background: var(--field); color: var(--fg); border: 1px solid var(--line);
+  }
+  #trialBadge b { font-family: var(--font-digits); font-weight: 500; }
+  #trialBadge a { text-decoration: none; padding: 6px 12px; border-radius: 99px; background: var(--accent); color: #fff; font-weight: 600; }
+  @media (max-width: 480px) { .card .row2 { grid-template-columns: 1fr; } }
+
   /* Black screen: covers everything; the timer keeps running underneath. */
   #blank {
     position: fixed; inset: 0; z-index: 100; background: #000;
@@ -290,6 +340,44 @@
   <button type="button" id="back">Back to timer</button>
 </div>
 
+<div class="overlay" id="gate" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <h2 id="gateTitle">Start your free 5 minutes</h2>
+    <p>Try every feature on your own screen. No card needed.</p>
+    <div id="gbtn"></div>
+    <div class="or">or fill in</div>
+    <form id="leadForm" novalidate>
+      <div class="row2">
+        <label class="f">Name<input type="text" id="leadFirst" autocomplete="given-name" required></label>
+        <label class="f">Surname<input type="text" id="leadLast" autocomplete="family-name" required></label>
+      </div>
+      <label class="f">Email<input type="email" id="leadEmail" autocomplete="email" required></label>
+      <label class="consent"><input type="checkbox" id="leadConsent" required> <span>I agree to receive emails about <span data-product>Big Countdown</span>. I can unsubscribe at any time.</span></label>
+      <div class="err" id="leadErr" role="alert"></div>
+      <button type="submit" class="primary wide">Start free trial</button>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="paywall" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <h2 id="payTitle">Your free 5 minutes are up</h2>
+    <p>Buy once and use <span data-product>Big Countdown</span> for life. No subscription.</p>
+    <div class="big"><span data-price>$49</span><small>one-time</small></div>
+    <ul>
+      <li>Unlimited countdowns, any length</li>
+      <li>Your logo and background colours</li>
+      <li>Black screen, warnings and alarm</li>
+      <li>Works offline as one file on your computer</li>
+    </ul>
+    <a class="btnlink wide" id="payBuy" href="#" target="_blank" rel="noopener">Buy lifetime access for <span data-price>$49</span></a>
+    <div class="err" id="payErr"></div>
+    <p class="small">After you pay, the full version arrives by email as a file. Open it and the time limit is gone.</p>
+  </div>
+</div>
+
+<div id="trialBadge" hidden>Free trial · <b id="trialLeft">5:00</b> left <a id="badgeBuy" href="#" target="_blank" rel="noopener">Buy <span data-price>$49</span></a></div>
+
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -346,6 +434,7 @@
     document.body.classList.toggle('warn', warn);
     document.body.classList.toggle('final', final && running);
     if (running && !finished) labelEl.textContent = final ? 'Final seconds' : warn ? 'Time is almost up' : '';
+    trialTick();
   }
 
   function setLabel() {
@@ -360,6 +449,7 @@
   }
 
   function start() {
+    if (!trialAllows()) return;
     if (finished || remainingMs <= 0) setTotal(readInputs() || total);
     if (total <= 0) return;
     unlockAudio();
@@ -595,6 +685,121 @@
   try { logoData = localStorage.getItem('countdown-logo'); } catch { logoData = null; }
   if (logoData && /^data:image\//.test(logoData)) logoImg.src = logoData; else logoData = null;
   layoutLogo();
+
+  // ---- Free trial (only active in the trial build) ----
+  // The build script switches TRIAL.enabled to true for the hosted free version.
+  const TRIAL = {
+    enabled: /*TRIAL_ENABLED*/false,
+    minutes: 5,
+    product: 'Big Countdown',
+    price: '$49',
+    buyUrl: '',          // checkout link (Lemon Squeezy, Gumroad, Paddle, Stripe Payment Link...)
+    leadEndpoint: '',    // URL that receives sign-ups as JSON (Formspree, Make/Zapier webhook, your CRM)
+    googleClientId: ''   // Google Identity Services web client ID, e.g. 1234-abc.apps.googleusercontent.com
+  };
+  const LIMIT_MS = TRIAL.minutes * 60 * 1000;
+  let trialUsed = 0, lastTrialTick = 0, lastTrialSave = 0, trialLocked = false;
+  const gate = $('gate'), paywall = $('paywall'), badge = $('trialBadge');
+
+  function getProfile() { return store.get('countdown-profile'); }
+  function trialAllows() {
+    if (!TRIAL.enabled) return true;
+    if (!getProfile()) { gate.hidden = false; return false; }
+    if (trialUsed >= LIMIT_MS) { lockOut(); return false; }
+    return true;
+  }
+  function trialTick() {
+    if (!TRIAL.enabled || trialLocked) return;
+    const now = Date.now();
+    if (running && lastTrialTick) trialUsed += now - lastTrialTick;
+    lastTrialTick = running ? now : 0;
+    if (now - lastTrialSave > 1000 || !running) { store.set(trialUsed, 'countdown-trial-used'); lastTrialSave = now; }
+    const left = Math.max(0, Math.ceil((LIMIT_MS - trialUsed) / 1000));
+    $('trialLeft').textContent = `${Math.floor(left / 60)}:${pad(left % 60)}`;
+    if (trialUsed >= LIMIT_MS) lockOut();
+  }
+  function lockOut() {
+    if (trialLocked) return;
+    trialLocked = true;
+    store.set(trialUsed, 'countdown-trial-used');
+    running = false; clearInterval(tick); releaseWake(); stopAlarm();
+    blank.hidden = true; badge.hidden = true; gate.hidden = true;
+    paywall.hidden = false;
+  }
+  function wireBuy(a) {
+    if (TRIAL.buyUrl) { a.href = TRIAL.buyUrl; return; }
+    a.removeAttribute('target');
+    a.addEventListener('click', e => { e.preventDefault(); $('payErr').textContent = 'The checkout link has not been added yet.'; });
+  }
+
+  async function sendLead(lead) {
+    if (!TRIAL.leadEndpoint) return true;
+    try {
+      const r = await fetch(TRIAL.leadEndpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(lead)
+      });
+      return r.ok;
+    } catch { return false; }
+  }
+  async function register(lead) {
+    lead = { ...lead, product: TRIAL.product, signedUpAt: new Date().toISOString(), page: location.href };
+    store.set(lead, 'countdown-profile');
+    gate.hidden = true; badge.hidden = false; trialTick();
+    // If the CRM can't be reached now, keep the lead and retry on the next visit.
+    if (!(await sendLead(lead))) store.set(lead, 'countdown-lead-pending');
+  }
+
+  $('leadForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const first = $('leadFirst').value.trim(), last = $('leadLast').value.trim(), email = $('leadEmail').value.trim();
+    const err = $('leadErr');
+    if (!first || !last) { err.textContent = 'Enter your name and surname.'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Enter a valid email address, like name@company.com.'; return; }
+    if (!$('leadConsent').checked) { err.textContent = 'Tick the box to agree to receive emails.'; return; }
+    err.textContent = '';
+    register({ firstName: first, lastName: last, email, method: 'form', marketingConsent: true });
+  });
+
+  // Google sign-in: loads Google's button when a client ID is set.
+  function setupGoogle() {
+    const box = $('gbtn');
+    if (!TRIAL.googleClientId) {
+      box.innerHTML = '<button type="button" class="gfallback"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continue with Google</button>';
+      box.querySelector('button').addEventListener('click', () => {
+        $('leadErr').textContent = 'Google sign-in is not connected yet. Please use the form below.';
+      });
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = () => {
+      google.accounts.id.initialize({ client_id: TRIAL.googleClientId, callback: res => {
+        try {
+          const b64 = res.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          const info = JSON.parse(decodeURIComponent(escape(atob(b64))));
+          register({ firstName: info.given_name || '', lastName: info.family_name || '', email: info.email, method: 'google', marketingConsent: false });
+        } catch { $('leadErr').textContent = 'Google sign-in did not finish. Please use the form below.'; }
+      }});
+      google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 320 });
+    };
+    s.onerror = () => { $('leadErr').textContent = 'Google sign-in could not load. Please use the form below.'; };
+    document.head.appendChild(s);
+  }
+
+  if (TRIAL.enabled) {
+    document.querySelectorAll('[data-price]').forEach(el => { el.textContent = TRIAL.price; });
+    document.querySelectorAll('[data-product]').forEach(el => { el.textContent = TRIAL.product; });
+    wireBuy($('payBuy')); wireBuy($('badgeBuy'));
+    const used = Number(store.get('countdown-trial-used'));
+    trialUsed = Number.isFinite(used) ? used : 0;
+    const pending = store.get('countdown-lead-pending');
+    if (pending) sendLead(pending).then(ok => { if (ok) try { localStorage.removeItem('countdown-lead-pending'); } catch {} });
+    setupGoogle();
+    if (!getProfile()) gate.hidden = false;
+    else if (trialUsed >= LIMIT_MS) lockOut();
+    else { badge.hidden = false; trialTick(); }
+  }
 
   // Boot with the last used duration, or 5 minutes.
   const saved = store.get();

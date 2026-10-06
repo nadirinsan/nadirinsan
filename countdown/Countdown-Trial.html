@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Big Countdown</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -246,6 +251,8 @@
     .progress span, .dock { transition: none; }
   }
 </style>
+</head>
+<body>
 
 <main class="stage">
   <div id="logoBox" class="m" hidden><img id="logoImg" alt="Logo"></div>
@@ -682,7 +689,7 @@
   // ---- Free trial (only active in the trial build) ----
   // The build script switches TRIAL.enabled to true for the hosted free version.
   const TRIAL = {
-    enabled: /*TRIAL_ENABLED*/false,
+    enabled: true,
     minutes: 5,
     product: 'Big Countdown',
     price: '$49',
@@ -800,3 +807,5 @@
   setLabel(); render();
 })();
 </script>
+</body>
+</html>
