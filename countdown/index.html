@@ -143,6 +143,41 @@
     border: 1px solid var(--line); border-radius: 4px;
   }
 
+  /* Logo: in the flow above the time when centred, pinned to a corner otherwise. */
+  #logoBox { display: flex; justify-content: center; }
+  #logoBox img { display: block; height: var(--logo-h, 10vh); max-width: 30vw; object-fit: contain; }
+  #logoBox.left, #logoBox.right { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); z-index: 5; }
+  #logoBox.left { left: 24px; }
+  #logoBox.right { right: 24px; }
+  body.logo-center #time { font-size: min(calc(96vw / (var(--chars, 5) * 0.62)), 40vh); }
+  #logoBox.s { --logo-h: 6vh; }
+  #logoBox.m { --logo-h: 10vh; }
+  #logoBox.l { --logo-h: 16vh; }
+
+  .logopick { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; position: relative; }
+  .logopick > span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .logopick select { padding: 9px 8px; font: 500 14px var(--font-ui); background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; }
+  .logopick button { padding: 9px 14px; }
+  #logoFile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .logopick .info {
+    flex: none; width: 24px; height: 24px; min-width: 0; padding: 0; border-radius: 50%;
+    font: italic 700 13px Georgia, "Times New Roman", serif; line-height: 1;
+    color: var(--muted); background: transparent; border: 1.5px solid var(--muted);
+  }
+  .info:hover, .info[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  .infopop {
+    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    width: min(340px, calc(100vw - 32px)); z-index: 20;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; font-size: 13px; line-height: 1.5;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .infopop strong { display: block; margin-bottom: 4px; font-size: 14px; }
+  .infopop ul { margin: 0; padding-left: 18px; }
+  .logomsg { width: 100%; text-align: center; font-size: 12px; color: var(--done); min-height: 0; }
+  .logomsg:empty { display: none; }
+
   /* Black screen: covers everything; the timer keeps running underneath. */
   #blank {
     position: fixed; inset: 0; z-index: 100; background: #000;
@@ -163,6 +198,7 @@
 </style>
 
 <main class="stage">
+  <div id="logoBox" class="m" hidden><img id="logoImg" alt="Logo"></div>
   <div class="label" id="label">Ready</div>
   <div id="time" aria-live="off">05:00</div>
   <div class="progress"><span id="bar"></span></div>
@@ -210,6 +246,33 @@
     <button type="button" class="swatch" data-bg="midnight" title="Midnight gradient" aria-label="Midnight gradient" style="--sw:linear-gradient(160deg,#2b3f9e,#0b1020 60%,#3d1659)"></button>
     <button type="button" class="swatch" data-bg="ocean" title="Ocean gradient" aria-label="Ocean gradient" style="--sw:linear-gradient(160deg,#0a6a80,#06334a 55%,#0b1d3a)"></button>
     <label class="custom" id="customWrap" title="Pick any colour"><input type="color" id="bgColor" value="#1e1e2e"> Custom</label>
+  </div>
+  <div class="logopick" role="group" aria-label="Logo">
+    <span>Logo</span>
+    <button type="button" class="info" id="logoInfo" aria-expanded="false" aria-controls="logoPop" title="Logo file requirements">i</button>
+    <div class="infopop" id="logoPop" role="note" hidden>
+      <strong>Logo file requirements</strong>
+      <ul>
+        <li>Formats: PNG, JPG, SVG, WebP or GIF</li>
+        <li>Maximum size: 2 MB</li>
+        <li>Best results: PNG or SVG with a transparent background, at least 400 px wide</li>
+        <li>The logo stays on this computer and is remembered next time</li>
+      </ul>
+    </div>
+    <input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif">
+    <button type="button" id="logoUpload">Upload logo</button>
+    <select id="logoPos" aria-label="Logo position">
+      <option value="center">Top centre</option>
+      <option value="left">Top left</option>
+      <option value="right">Top right</option>
+    </select>
+    <select id="logoSize" aria-label="Logo size">
+      <option value="s">Small</option>
+      <option value="m" selected>Medium</option>
+      <option value="l">Large</option>
+    </select>
+    <button type="button" id="logoRemove" hidden>Remove</button>
+    <div class="logomsg" id="logoMsg" role="status"></div>
   </div>
   <div class="keys">
     <kbd>Space</kbd> start / pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>B</kbd> black screen &nbsp; <kbd>Esc</kbd> stop alarm &nbsp; <kbd>Enter</kbd> start typed time
@@ -410,7 +473,7 @@
   document.addEventListener('keydown', e => {
     // Any key brings the timer back from the black screen.
     if (!blank.hidden) { e.preventDefault(); setBlank(false); return; }
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+    if (['INPUT', 'BUTTON', 'SELECT'].includes(e.target.tagName)) return;
     if (e.code === 'Space') { e.preventDefault(); running ? pause() : start(); }
     else if (e.key === 'r' || e.key === 'R') reset();
     else if (e.key === 'Escape' && finished) reset();
@@ -459,6 +522,72 @@
     if (savedBg.custom) bgColor.value = savedBg.custom;
     applyBg(savedBg.name, savedBg.custom);
   } else applyBg('auto');
+
+  // Logo upload. Kept in this browser only; nothing is sent anywhere.
+  const LOGO_MAX = 2 * 1024 * 1024;
+  const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif'];
+  const logoBox = $('logoBox'), logoImg = $('logoImg'), logoMsg = $('logoMsg');
+  const logoPos = $('logoPos'), logoSize = $('logoSize'), logoFile = $('logoFile');
+  const infoBtn = $('logoInfo'), infoPop = $('logoPop');
+  let logoData = null;
+
+  function layoutLogo() {
+    const pos = logoPos.value;
+    logoBox.className = pos === 'center' ? logoSize.value : `${pos} ${logoSize.value}`;
+    logoBox.hidden = !logoData;
+    document.body.classList.toggle('logo-center', !!logoData && pos === 'center');
+    $('logoRemove').hidden = !logoData;
+    $('logoUpload').textContent = logoData ? 'Change logo' : 'Upload logo';
+  }
+  function saveLogo() {
+    try {
+      if (logoData) localStorage.setItem('countdown-logo', logoData); else localStorage.removeItem('countdown-logo');
+      return true;
+    } catch { return false; }
+  }
+  function saveLogoLayout() { store.set({ pos: logoPos.value, size: logoSize.value }, 'countdown-logo-layout'); }
+
+  $('logoUpload').addEventListener('click', () => logoFile.click());
+  logoFile.addEventListener('change', () => {
+    const f = logoFile.files[0];
+    logoFile.value = '';
+    if (!f) return;
+    if (!LOGO_TYPES.includes(f.type)) {
+      logoMsg.textContent = `That file type isn't supported. Use PNG, JPG, SVG, WebP or GIF.`;
+      return;
+    }
+    if (f.size > LOGO_MAX) {
+      logoMsg.textContent = `That file is ${(f.size / 1048576).toFixed(1)} MB. The limit is 2 MB; try exporting a smaller version.`;
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      logoData = reader.result; logoImg.src = logoData;
+      logoMsg.textContent = saveLogo() ? '' : 'Logo added, but this browser could not save it for next time.';
+      layoutLogo();
+    };
+    reader.onerror = () => { logoMsg.textContent = 'That file could not be read. Try saving it again and re-uploading.'; };
+    reader.readAsDataURL(f);
+  });
+  $('logoRemove').addEventListener('click', () => {
+    logoData = null; logoImg.removeAttribute('src'); logoMsg.textContent = '';
+    saveLogo(); layoutLogo();
+  });
+  [logoPos, logoSize].forEach(el => el.addEventListener('change', () => { layoutLogo(); saveLogoLayout(); }));
+
+  function setInfo(open) { infoPop.hidden = !open; infoBtn.setAttribute('aria-expanded', String(open)); }
+  infoBtn.addEventListener('click', e => { e.stopPropagation(); setInfo(infoPop.hidden); });
+  document.addEventListener('click', e => { if (!infoPop.hidden && !infoPop.contains(e.target)) setInfo(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setInfo(false); });
+
+  const savedLayout = store.get('countdown-logo-layout');
+  if (savedLayout) {
+    if ([...logoPos.options].some(o => o.value === savedLayout.pos)) logoPos.value = savedLayout.pos;
+    if ([...logoSize.options].some(o => o.value === savedLayout.size)) logoSize.value = savedLayout.size;
+  }
+  try { logoData = localStorage.getItem('countdown-logo'); } catch { logoData = null; }
+  if (logoData && /^data:image\//.test(logoData)) logoImg.src = logoData; else logoData = null;
+  layoutLogo();
 
   // Boot with the last used duration, or 5 minutes.
   const saved = store.get();
