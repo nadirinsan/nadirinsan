@@ -25,15 +25,39 @@ Status key: `V` verified in source · `U` user-reported, source not supplied · 
 
 ## DC-L3-1 — Illuminated ceiling-mounted directional sign
 
-**Source file not received.** Values below come only from the user's brief.
+**Source file still not received** (values from the user's brief only, status U). A related sheet, DC-S1-1, was received on 2026-11-16 — see below. Whether DC-L3-1 is a separate family member (e.g. large / 3-sided) is unconfirmed.
 
-| Item | Value | Status |
-|---|---|---|
-| Efficacy / wattage / TM-21 / warranty / IP | 178 lm/W; 0.36/0.6/0.8 W per module; >60,000 h; 5 years; IP67 | U (identical to the module panel on the other sheets — likely the same LED module) |
-| Construction | Aluminium, organic glass, LED, mechanical mounting and electrical connections | U |
-| Dimensions, mounting height, fixing, arrows, layout | — | NS |
+## DC-S1-1 — Directional, Ceiling Mounted, 1-sided (received 2026-11-16)
 
-Action: request DC-L3-1.pdf before any finding on directional signs is made.
+File `DC-S1-1.pdf`, 2 pp, A4 landscape. Title block: Size A3 · Scale 1:10 · Date 2026-08-04 · **no NOT FOR CONSTRUCTION stamp**.
+
+| Item | Value | Source | Status |
+|---|---|---|---|
+| Sign code | File/page title "DC-S1-1"; title block "D-C-S1-1" | p1 | **C** |
+| Size | Title block "1250x350 1-sided"; front view 1250 (1254) × **250** (254) × 100 mm | p1 | **C** — 350 vs 250 mm height |
+| Front panel / frame | Plastic (Acrylic/Polycarbonate) with printed vinyl / 2mm aluminium plate | p1 | V / **C** vs p2 (4 mm organic glass, UV print, 3 mm aluminium sheet) |
+| Mounting | Ceiling aluminium tubes, 200 mm from edges, ±50 mm, max Ø30 mm (producer to decide) | p1 | V; p2 shows D=20 mm tube |
+| Lighting zones | Arrows only backlit | p1 | V |
+| Position | Bottom **2100 mm** from floor | p1 | V — differs from 2300 mm for SN-C-L-2 / SN-S-XL-2 |
+| Weight | 14.5 kg (estimate based on typical illuminated signs) | p1 | V — near-identical to SN-C-L-2 (1800 mm, 2-sided, 15 kg): estimate unreliable |
+| Fabrication sheet | Same as SN-C-L-2 p2 (concrete soffit, anchor 10x120, flange, 2 screws Ø6×15, suspended ceiling, cable entry/exit, 40x20 box profile, LED module panel, RAL 180,20,10) | p2 | V |
+| Layout example | "← ① ② Çıxış Exit / Həsən Əliyev küç." | p1 | Example only; reverse face of a 1-sided sign is undefined |
+
+## ID-W-S / ID-W-M / ID-W-L — Identification, Wall Mounted, 1250 / 1500 / 1800 × 200 mm (received 2026-11-16)
+
+Files `ID-W-S.pdf`, `ID-W-M.pdf`, `ID-W-L.pdf`, 2 pp each. Title blocks: A3 · 1:10 · 2026-08-04. NOT FOR CONSTRUCTION stamp on S and M; **absent on L**. Sheet 2 (fabrication) is **identical in all three files**.
+
+| Item | Value | Source | Status |
+|---|---|---|---|
+| Front panel / frame | Plastic (Acrylic/Polycarbonate) with printed vinyl / 2mm aluminium plate, powder coated/painted | p1 | V / **C** vs p2 |
+| Mounting / position | Wall mounted (invisible mounting); top 2400 mm from FFL | p1 | V |
+| Use / illumination / data | Indoor / No / No | p1 | V |
+| Weight | S 4.5 kg · M 4.5 kg · L 5.5 kg | p1 | V — S and M identical despite size difference |
+| Dimensions | S 1250 (1254) × 200 (204) · M 1500 (1504) × 200 (204) · L 1800 × 200 (204), **top view of L reads 1504** · depth 10 mm (top view) | p1 | **C** for L |
+| Build-up (p2) | 10 mm Aluminium Frame (Powder Coated/Painted) · "Germetik slikon yapışdırma" (silicone sealant bonding) · 6 mm Polycarbonate · 4 mm Acrylic · UV print + lacquer applied after screws | p2 | V — total ≥ 20 mm vs 10 mm depth on p1: **C** |
+| Fixing | "Bağlantı yeri" — 2 × stainless screws Ø12 × 70 mm through the panel; heads filled and smoothed | p2 | V — same 2 screws for all three lengths; substrate/plug type NS |
+| Layout / content | none | — | NS — what the sign identifies is not defined |
+| Colour | not stated on p2 | — | NS |
 
 ## IA-T — Information Area Totem 900 × 1600 mm
 
@@ -123,4 +147,6 @@ File `ID-EXT-PM_3.pdf`, 4 pages, A4 portrait. Title blocks: Size A3 · Scale 1:1
 9. "B04 Station" vs "B4 Station".
 10. Module data presented without module count, driver, face luminance, enclosure IP.
 11. No fire reaction classification for any non-metallic material.
-12. No revision control; all sheets "NOT FOR CONSTRUCTION".
+12. No revision control; most sheets "NOT FOR CONSTRUCTION" but DC-S1-1 and ID-W-L carry no stamp.
+13. DC-S1-1 height 350 (title) vs 250 mm (drawing); code D-C-S1-1 vs DC-S1-1; bottom 2100 mm vs 2300 mm for other overhead signs.
+14. ID-W-L top view 1504 mm vs 1800 mm; ID-W build-up ≥20 mm vs 10 mm depth; one fixing detail (2 screws) for all three lengths.
