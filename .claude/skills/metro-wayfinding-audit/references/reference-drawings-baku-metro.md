@@ -150,3 +150,10 @@ File `ID-EXT-PM_3.pdf`, 4 pages, A4 portrait. Title blocks: Size A3 · Scale 1:1
 12. No revision control; most sheets "NOT FOR CONSTRUCTION" but DC-S1-1 and ID-W-L carry no stamp.
 13. DC-S1-1 height 350 (title) vs 250 mm (drawing); code D-C-S1-1 vs DC-S1-1; bottom 2100 mm vs 2300 mm for other overhead signs.
 14. ID-W-L top view 1504 mm vs 1800 mm; ID-W build-up ≥20 mm vs 10 mm depth; one fixing detail (2 screws) for all three lengths.
+
+## Revision log
+| Date received | File | Change vs previous | Note |
+|---|---|---|---|
+| 2026-11-17 | ID-EXT-PM_3_1.pdf | None (byte-identical to ID-EXT-PM_3.pdf) | All ID-EXT-PM items open |
+| 2026-11-17 | SN-C-L-2_2.pdf | Drawing unchanged; 2 PDF comments by Amar Mohindra: lighting to be in the middle (station name) zone, not at the edges as on DC signs | Fabrication sheet p2 is identical to DC-S1-1 p2 |
+| 2026-11-17 | SN-C-XL-2_2.pdf | Drawing unchanged; 3 PDF comments: sign type is SN-S-XL-2; dark green casing must enclose internal profiles flush with all faces; add covering elements visible between wall cladding | Confirms code conflict |
