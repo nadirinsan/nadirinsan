@@ -50,3 +50,16 @@
 - Reviziya nəzarəti və inşaata hazır sənədləşmə yoxdur.
 
 Əvvəlki mailə əsasən daxil edilməyənlər: bərkidilmə hesabatı/təhlükəsizlik trosu və materialların yanğın sinfi (4–5), qalınlıq/material ziddiyyətləri və LED modul məlumatları (13–14).
+
+## 5. Layihəçinin mail mətni nəzərə alındıqdan sonra (17.11.2026)
+
+Mail layihəçinin keçən həftə müzakirə olunan və çertyojlarda hələ əks olunmayan məqamlarını təkrarlayır:
+- SN-C-L-2: işıq mərkəzdə, kənarlarda yox.
+- SN-S-XL-2: kod SN-S-XL-2; tünd yaşıl örtük dayaq profilinə də uzanmalı, nişan qutusu ilə bir səviyyədə olmalı və divar örtüyünə qədər davam etməlidir.
+- ID-EXT-PM: çap olunmuş layout bütün nişan qutusunu əhatə etməlidir (şifahi razılaşdırılıb, sənəddə yoxdur); işıqlandırma zonaları aydındır.
+- "All other sign types are approved."
+
+### Əlavə və dəyişən qeydlər
+- **Yeni (əsas) — ID-EXT-PM, çapın bütün qutunu əhatə etməsi:** istehsal vərəqində 4 ayrı 4 mm orqanik şüşə panel R20 alüminium künc profilləri ilə birləşir, UV çap isə sərt panelə vurulur. Fasiləsiz çapın künclərdən və alüminium profillərdən necə keçəcəyi (elastik vinil, künc profilinin üstünə çap, tikiş yerləri) göstərilməlidir. Bu həll işıqlandırma zonalarına və təmir üçün sökülməyə də təsir edir.
+- **"Digər tiplər təsdiqlənib" ifadəsi:** DC-S1-1 və ID-W-S/M/L üzrə 16.11.2026 mailimizdəki 1–8-ci bəndlər hələ cavablandırılmayıb (məs. DC-S1-1 250/350 mm, 2100/2300 mm, birtərəfli nişanın arxa üzü; ID-W-L 1800/1504 mm; ID-W layout qaydaları). Bu bəndlər həll olunmadan həmin tiplər yekunlaşdırılmamalıdır.
+- K1, E1, E2 layihəçinin tələbləri ilə üst-üstə düşür — bizim mailimizdə dəstəkləyici kimi qeyd olunur, təkrarlanmır.
