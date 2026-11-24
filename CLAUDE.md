@@ -39,3 +39,7 @@ Folders: Analytics & Reporting, SMM & Content, Campaigns, SEO & Growth Hacking, 
 - Content drafts are marked `PENDING REVIEW` — never publish without human approval
 - SMM content cadence: every 2 days
 - Reports: weekly (Mondays)
+
+## Metro Wayfinding Audit Skill
+
+`.claude/skills/metro-wayfinding-audit/` — professional audit of underground metro wayfinding signage (gap analysis, scoring, technical/accessibility review, EN/AZ reports). Entry point `SKILL.md`; Baku Metro reference drawing register in `references/reference-drawings-baku-metro.md`; worked test on the supplied drawings in `examples/drawing-review-baku-metro.md`.

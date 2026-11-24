@@ -1,0 +1,13 @@
+{
+  "station": "Station X (fictional example)",
+  "weights": {"A": 25, "B": 20, "C": 15, "D": 15, "E": 15, "F": 10},
+  "dimensions": {
+    "A": {"score": 2, "coverage": "Partial"},
+    "B": {"score": 3, "coverage": "Partial"},
+    "C": {"score": 4, "coverage": "Partial"},
+    "D": {"score": 2, "coverage": "Partial"},
+    "E": {"score": 3, "coverage": "Partial"},
+    "F": {"score": null, "coverage": "Insufficient"}
+  },
+  "open_confirmed_critical": 1
+}
